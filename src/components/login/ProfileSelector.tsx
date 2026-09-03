@@ -6,10 +6,20 @@ import ProfileCard from "./ProfileCard";
 
 const profiles = [
   {
+    id: 0,
+    letter: "P",
+    name: "Perfil prueba POS",
+    role: "Vendedor",
+    route: "/pos",
+    background: "#D8A814",
+    textColor: "#FFFFFF",
+  },
+  {
     id: 1,
     letter: "A",
     name: "Adán Morales",
     role: "Supervisor",
+    route: "/inicio",
     background: "#D8A814",
     textColor: "#FFFFFF",
   },
@@ -18,6 +28,7 @@ const profiles = [
     letter: "M",
     name: "María López",
     role: "Vendedora",
+    route: "/pos",
     background: "#FFFFFF",
     textColor: "#050505",
   },
@@ -26,6 +37,7 @@ const profiles = [
     letter: "J",
     name: "José Ramírez",
     role: "Vendedor",
+    route: "/pos",
     background: "#292929",
     textColor: "#FFFFFF",
   },
@@ -34,6 +46,7 @@ const profiles = [
     letter: "L",
     name: "Luis Martínez",
     role: "Administrador",
+    route: "/inicio",
     background: "#D8A814",
     textColor: "#FFFFFF",
   },
@@ -42,6 +55,7 @@ const profiles = [
     letter: "K",
     name: "Karen Castillo",
     role: "Vendedora",
+    route: "/pos",
     background: "#FFFFFF",
     textColor: "#050505",
   },
@@ -50,6 +64,7 @@ const profiles = [
     letter: "R",
     name: "Ricardo Sánchez",
     role: "Supervisor",
+    route: "/inicio",
     background: "#292929",
     textColor: "#FFFFFF",
   },
@@ -89,13 +104,13 @@ export default function ProfileSelector() {
       return;
     }
 
-    // PIN de prueba
     if (pin !== "1234") {
       setError("PIN incorrecto.");
       return;
     }
 
-    router.push("/inicio");
+    const destination = selectedProfile?.route ?? "/inicio";
+    router.push(destination);
   };
 
   return (
