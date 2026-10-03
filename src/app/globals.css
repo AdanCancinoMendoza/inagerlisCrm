@@ -35,6 +35,50 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  scroll-behavior: smooth;
+}
+
+/* ==========================================================================
+   Custom Sleek Scrollbar System (Chrome, Safari, Edge, Firefox)
+   ========================================================================== */
+
+/* Firefox Standard */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #D1D1D1 transparent;
+}
+
+/* WebKit (Chrome, Safari, Edge, Brave) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* Dark mode / dark containers scrollbar */
+.bg-\[\#050505\]::-webkit-scrollbar-thumb,
+.bg-\[var\(--dark-bg\)\]::-webkit-scrollbar-thumb,
+[data-theme="dark"]::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.bg-\[\#050505\]::-webkit-scrollbar-thumb:hover,
+.bg-\[var\(--dark-bg\)\]::-webkit-scrollbar-thumb:hover,
+[data-theme="dark"]::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
 }
 
 /* System Theme Color Helper Utilities */

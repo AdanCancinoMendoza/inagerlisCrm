@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSidebar } from "@/context/SidebarContext";
 
@@ -20,6 +20,8 @@ import {
   WalletCards,
   PanelLeftClose,
   PanelLeftOpen,
+  CreditCard,
+  LogOut,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -39,8 +41,28 @@ export default function Sidebar() {
     pathname.startsWith("/stock")
   );
 
+  const [usuario, setUsuario] = useState<any>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const current = localStorage.getItem("crm_usuario_actual");
+      if (current) {
+        try {
+          setUsuario(JSON.parse(current));
+        } catch {}
+      }
+    }
+  }, []);
+
   const goTo = (route: string) => {
     router.push(route);
+  };
+
+  const handleLogout = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("crm_usuario_actual");
+      window.location.href = "/login";
+    }
   };
 
   return (
@@ -304,6 +326,26 @@ export default function Sidebar() {
           {!collapsed && <span>Configuración</span>}
         </button>
 
+        {/* Suscripciones */}
+        <button
+          onClick={() => goTo("/suscripciones")}
+          title="Suscripciones"
+          className={`
+            mt-2 flex h-12 w-full items-center
+            border-l-2 transition-colors
+            ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
+            text-sm font-medium
+            ${
+              pathname.startsWith("/suscripciones") || pathname.startsWith("/subscripciones")
+                ? "border-[#D8A814] bg-[#141414] text-[#D8A814]"
+                : "border-transparent text-[#C5C5C5] hover:text-white"
+            }
+          `}
+        >
+          <CreditCard size={18} strokeWidth={1.8} />
+          {!collapsed && <span>Suscripciones</span>}
+        </button>
+
         {/* Operaciones */}
         <div className="mt-6">
           {!collapsed && (
@@ -392,17 +434,27 @@ export default function Sidebar() {
 
       {/* Usuario Footer */}
       <div className="shrink-0 border-t border-[#262626] bg-[#050505] p-4">
-        <div className={`flex w-full items-center ${collapsed ? "justify-center" : "gap-3"}`}>
-          <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-[#D8A814] font-bold text-white">
-            A
+        <div className={`flex w-full items-center justify-between ${collapsed ? "flex-col gap-3" : ""}`}>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-[#D8A814] font-bold text-white">
+              {(usuario?.nombre || "U").charAt(0).toUpperCase()}
+            </div>
+
+            {!collapsed && (
+              <div className="min-w-0 text-left">
+                <p className="truncate text-sm font-semibold text-white">{usuario?.nombre || "Usuario"}</p>
+                <p className="text-xs text-[#D8A814]">{usuario?.rol === "ADMIN" ? "Administrador" : usuario?.rol === "GERENTE" ? "Gerente" : usuario?.rol || "Supervisor"}</p>
+              </div>
+            )}
           </div>
 
-          {!collapsed && (
-            <div className="min-w-0 text-left">
-              <p className="truncate text-sm font-semibold">Adán Morales</p>
-              <p className="text-xs text-[#D8A814]">Supervisor</p>
-            </div>
-          )}
+          <button
+            onClick={handleLogout}
+            title="Cerrar sesión"
+            className="flex h-9 w-9 items-center justify-center text-[#888888] hover:bg-red-500/20 hover:text-red-400 transition-colors rounded cursor-pointer"
+          >
+            <LogOut size={18} />
+          </button>
         </div>
       </div>
     </aside>

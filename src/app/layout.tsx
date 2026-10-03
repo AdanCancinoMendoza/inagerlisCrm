@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { SidebarProvider } from "@/context/SidebarContext";
+import AuthGuard from "@/components/auth/AuthGuard";
 
 export const metadata: Metadata = {
   title: "CRM + POS System",
@@ -17,7 +18,9 @@ export default function RootLayout({
     <html lang="es">
       <body>
         <ThemeProvider>
-          <SidebarProvider>{children}</SidebarProvider>
+          <SidebarProvider>
+            <AuthGuard>{children}</AuthGuard>
+          </SidebarProvider>
         </ThemeProvider>
       </body>
     </html>

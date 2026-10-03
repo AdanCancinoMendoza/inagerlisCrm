@@ -1,16 +1,64 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Lock, Mail, UserPlus } from "lucide-react";
+import { AlertCircle, ArrowRight, Loader2, Lock, Mail, UserPlus } from "lucide-react";
+import { apiRequest } from "@/services/api";
+import { getRutaPorRol, getUsuarioActual, setUsuarioActual, UsuarioPerfil } from "@/services/auth";
 
-export default function LoginForm() {
+export default function LoginForm({
+  initialEmail = "",
+}: {
+  initialEmail?: string;
+}) {
   const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [email, setEmail] = useState(initialEmail);
+  const [password, setPassword] = useState("");
+  const [recordarme, setRecordarme] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialEmail) {
+      setEmail(initialEmail);
+    }
+  }, [initialEmail]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    router.push("/inicio");
+    setErrorMsg(null);
+
+    if (!email.trim() || !password.trim()) {
+      setErrorMsg("Ingresa tu correo y contraseña.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await apiRequest<{ usuario: UsuarioPerfil }>("/usuarios/login", {
+        method: "POST",
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+        }),
+      });
+
+      if (res.usuario) {
+        setUsuarioActual(res.usuario);
+        const destination = getRutaPorRol(res.usuario.rol);
+        router.push(destination);
+      } else {
+        throw new Error("Respuesta inválida del servidor");
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "Credenciales incorrectas o usuario no encontrado.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -60,6 +108,14 @@ export default function LoginForm() {
           </p>
         </div>
 
+        {/* Banner de error */}
+        {errorMsg && (
+          <div className="mb-5 flex items-start gap-2.5 border border-red-200 bg-red-50 p-3.5 text-red-700">
+            <AlertCircle size={18} className="mt-0.5 shrink-0 text-red-600" />
+            <p className="text-xs font-semibold">{errorMsg}</p>
+          </div>
+        )}
+
         {/* Formulario */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Correo */}
@@ -73,6 +129,11 @@ export default function LoginForm() {
               <input
                 type="email"
                 required
+                value={email}
+                onChange={(e) => {
+                  setErrorMsg(null);
+                  setEmail(e.target.value);
+                }}
                 placeholder="ejemplo@empresa.com"
                 className="
                   h-[50px]
@@ -103,6 +164,11 @@ export default function LoginForm() {
               <input
                 type="password"
                 required
+                value={password}
+                onChange={(e) => {
+                  setErrorMsg(null);
+                  setPassword(e.target.value);
+                }}
                 placeholder="••••••••••••"
                 className="
                   h-[50px]
@@ -127,6 +193,8 @@ export default function LoginForm() {
             <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-black">
               <input
                 type="checkbox"
+                checked={recordarme}
+                onChange={(e) => setRecordarme(e.target.checked)}
                 className="h-4 w-4 rounded border-[#CCCCCC] accent-black"
               />
               Recordarme
@@ -143,6 +211,7 @@ export default function LoginForm() {
           {/* Botón Iniciar Sesión */}
           <button
             type="submit"
+            disabled={loading}
             className="
               flex
               h-[50px]
@@ -158,10 +227,20 @@ export default function LoginForm() {
               text-white
               transition-colors
               hover:bg-[#262626]
+              disabled:opacity-60
             "
           >
-            <span>Iniciar sesión</span>
-            <ArrowRight size={16} />
+            {loading ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                <span>Validando...</span>
+              </>
+            ) : (
+              <>
+                <span>Iniciar sesión</span>
+                <ArrowRight size={16} />
+              </>
+            )}
           </button>
         </form>
 

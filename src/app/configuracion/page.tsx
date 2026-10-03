@@ -6,6 +6,7 @@ import Header from "@/components/layout/Header";
 import { COLOR_PALETTES, useTheme } from "@/context/ThemeContext";
 import { useSidebar } from "@/context/SidebarContext";
 import { Check } from "lucide-react";
+import SuscripcionesView from "@/components/suscripciones/SuscripcionesView";
 
 const branches = [
   {
@@ -76,6 +77,7 @@ export default function ConfiguracionPage() {
     "Sucursales",
     "Terminales",
     "Preferencias",
+    "Suscripciones",
   ];
 
   return (
@@ -652,6 +654,11 @@ export default function ConfiguracionPage() {
                 </div>
               </section>
             </div>
+          )}
+
+          {/* SUSCRIPCIONES */}
+          {activeTab === "Suscripciones" && (
+            <SuscripcionesView />
           )}
         </div>
       </div>
