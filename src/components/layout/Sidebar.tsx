@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useSidebar } from "@/context/SidebarContext";
 
 import {
   House,
@@ -15,13 +16,16 @@ import {
   ChartNoAxesCombined,
   ChevronDown,
   UserRoundCog,
-  ReceiptText
-
+  ReceiptText,
+  WalletCards,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 
 export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
+  const { collapsed, toggleSidebar } = useSidebar();
 
   const [clientesOpen, setClientesOpen] = useState(
     pathname.startsWith("/clientes")
@@ -40,41 +44,66 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-[250px] flex-col bg-[#050505] text-white">
-      {/* Logo */}
-      <div className="flex h-24 shrink-0 items-center justify-center border-b border-[#262626] px-4">
-        <Image
-          src="/logo.png"
-          alt="Imagertis logo"
-          width={220}
-          height={90}
-          priority
-          className="h-auto w-[150px] object-contain"
-        />
+    <aside
+      className={`fixed left-0 top-0 z-40 flex h-screen flex-col bg-[var(--dark-bg)] text-white transition-all duration-300 ${
+        collapsed ? "w-[80px]" : "w-[250px]"
+      }`}
+    >
+      {/* Logo y Botón Colapsar */}
+      <div className="flex h-24 shrink-0 items-center justify-between border-b border-[var(--dark-border)] px-4">
+        {!collapsed ? (
+          <Image
+            src="/logo.png"
+            alt="Logo"
+            width={150}
+            height={60}
+            priority
+            className="h-auto w-[130px] object-contain cursor-pointer"
+            onClick={() => goTo("/inicio")}
+          />
+        ) : (
+          <div
+            onClick={() => goTo("/inicio")}
+            className="mx-auto flex h-10 w-10 items-center justify-center border border-[#D8A814] font-bold text-[#D8A814] cursor-pointer"
+          >
+            C
+          </div>
+        )}
+
+        <button
+          onClick={toggleSidebar}
+          title={collapsed ? "Desplegar menú" : "Ocultar menú"}
+          className="text-[#777777] hover:text-white transition-colors"
+        >
+          {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+        </button>
       </div>
 
       {/* Navegación */}
       <nav
         className="
-          flex-1 overflow-y-auto px-5 py-8
+          flex-1 overflow-y-auto px-3 py-6
 
           [&::-webkit-scrollbar]:hidden
           [-ms-overflow-style:none]
           [scrollbar-width:none]
         "
       >
-        <p className="mb-4 px-4 text-xs font-semibold uppercase tracking-[0.2em] text-[#777777]">
-          Principal
-        </p>
+        {!collapsed && (
+          <p className="mb-4 px-4 text-xs font-semibold uppercase tracking-[0.2em] text-[#777777]">
+            Principal
+          </p>
+        )}
 
         {/* Inicio */}
         <button
           onClick={() => goTo("/inicio")}
+          title="Inicio"
           className={`
             flex h-12 w-full items-center
-            gap-3 border-l-2 px-4
-            text-left text-sm font-medium
-            transition-colors
+            border-l-2 transition-colors
+            ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
+            text-sm font-medium
             ${
               pathname === "/inicio"
                 ? "border-[#D8A814] bg-[#141414] text-[#D8A814]"
@@ -83,19 +112,19 @@ export default function Sidebar() {
           `}
         >
           <House size={18} strokeWidth={1.8} />
-
-          <span>Inicio</span>
+          {!collapsed && <span>Inicio</span>}
         </button>
 
         {/* Clientes */}
         <div className="mt-2">
           <button
-            onClick={() => setClientesOpen(!clientesOpen)}
+            onClick={() => (collapsed ? goTo("/clientes") : setClientesOpen(!clientesOpen))}
+            title="Clientes"
             className={`
               flex h-12 w-full items-center
-              gap-3 border-l-2 px-4
-              text-left text-sm font-medium
-              transition-colors
+              border-l-2 transition-colors
+              ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
+              text-sm font-medium
               ${
                 pathname.startsWith("/clientes")
                   ? "border-[#D8A814] text-[#D8A814]"
@@ -104,76 +133,26 @@ export default function Sidebar() {
             `}
           >
             <Users size={18} strokeWidth={1.8} />
-
-            <span className="flex-1">
-              Clientes
-            </span>
-
-            <ChevronDown
-              size={15}
-              className={`
-                transition-transform duration-200
-                ${clientesOpen ? "rotate-180" : ""}
-              `}
-            />
+            {!collapsed && (
+              <>
+                <span className="flex-1">Clientes</span>
+                <ChevronDown
+                  size={15}
+                  className={`transition-transform duration-200 ${clientesOpen ? "rotate-180" : ""}`}
+                />
+              </>
+            )}
           </button>
 
-          {clientesOpen && (
+          {!collapsed && clientesOpen && (
             <div className="ml-[27px] border-l border-[#2B2B2B] pl-5">
               <button
                 onClick={() => goTo("/clientes")}
-                className={`
-                  block w-full py-3 text-left text-sm
-                  ${
-                    pathname === "/clientes"
-                      ? "font-semibold text-[#D8A814]"
-                      : "text-[#8F8F8F] hover:text-white"
-                  }
-                `}
+                className={`block w-full py-2.5 text-left text-sm ${
+                  pathname === "/clientes" ? "font-semibold text-[#D8A814]" : "text-[#8F8F8F] hover:text-white"
+                }`}
               >
                 Todos los clientes
-              </button>
-
-              <button
-                onClick={() => goTo("/clientes/nuevos")}
-                className={`
-                  block w-full py-3 text-left text-sm
-                  ${
-                    pathname === "/clientes/nuevos"
-                      ? "font-semibold text-[#D8A814]"
-                      : "text-[#8F8F8F] hover:text-white"
-                  }
-                `}
-              >
-                Nuevos
-              </button>
-
-              <button
-                onClick={() => goTo("/clientes/frecuentes")}
-                className={`
-                  block w-full py-3 text-left text-sm
-                  ${
-                    pathname === "/clientes/frecuentes"
-                      ? "font-semibold text-[#D8A814]"
-                      : "text-[#8F8F8F] hover:text-white"
-                  }
-                `}
-              >
-                Frecuentes
-              </button>
-
-              <button
-                onClick={() => goTo("/clientes/seguimientos")}
-                className={`
-                  block w-full py-3 text-left text-sm
-                  ${
-                    pathname === "/clientes/seguimientos"
-                      ? "font-semibold text-[#D8A814]"
-                      : "text-[#8F8F8F] hover:text-white"
-                  }
-                `}
-              >
-                Seguimientos
               </button>
             </div>
           )}
@@ -182,12 +161,13 @@ export default function Sidebar() {
         {/* Artículos */}
         <div className="mt-2">
           <button
-            onClick={() => setArticulosOpen(!articulosOpen)}
+            onClick={() => (collapsed ? goTo("/articulos") : setArticulosOpen(!articulosOpen))}
+            title="Artículos"
             className={`
               flex h-12 w-full items-center
-              gap-3 border-l-2 px-4
-              text-left text-sm font-medium
-              transition-colors
+              border-l-2 transition-colors
+              ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
+              text-sm font-medium
               ${
                 pathname.startsWith("/articulos")
                   ? "border-[#D8A814] text-[#D8A814]"
@@ -196,90 +176,26 @@ export default function Sidebar() {
             `}
           >
             <Package size={18} strokeWidth={1.8} />
-
-            <span className="flex-1">
-              Artículos
-            </span>
-
-            <ChevronDown
-              size={15}
-              className={`
-                transition-transform duration-200
-                ${articulosOpen ? "rotate-180" : ""}
-              `}
-            />
+            {!collapsed && (
+              <>
+                <span className="flex-1">Artículos</span>
+                <ChevronDown
+                  size={15}
+                  className={`transition-transform duration-200 ${articulosOpen ? "rotate-180" : ""}`}
+                />
+              </>
+            )}
           </button>
 
-          {articulosOpen && (
+          {!collapsed && articulosOpen && (
             <div className="ml-[27px] border-l border-[#2B2B2B] pl-5">
               <button
                 onClick={() => goTo("/articulos")}
-                className={`
-                  block w-full py-3 text-left text-sm
-                  ${
-                    pathname === "/articulos"
-                      ? "font-semibold text-[#D8A814]"
-                      : "text-[#8F8F8F] hover:text-white"
-                  }
-                `}
+                className={`block w-full py-2.5 text-left text-sm ${
+                  pathname === "/articulos" ? "font-semibold text-[#D8A814]" : "text-[#8F8F8F] hover:text-white"
+                }`}
               >
                 Todos los artículos
-              </button>
-
-              <button
-                onClick={() => goTo("/articulos/familias")}
-                className={`
-                  block w-full py-3 text-left text-sm
-                  ${
-                    pathname === "/articulos/familias"
-                      ? "font-semibold text-[#D8A814]"
-                      : "text-[#8F8F8F] hover:text-white"
-                  }
-                `}
-              >
-                Familias
-              </button>
-
-              <button
-                onClick={() => goTo("/articulos/subfamilias")}
-                className={`
-                  block w-full py-3 text-left text-sm
-                  ${
-                    pathname === "/articulos/subfamilias"
-                      ? "font-semibold text-[#D8A814]"
-                      : "text-[#8F8F8F] hover:text-white"
-                  }
-                `}
-              >
-                Subfamilias
-              </button>
-
-              <button
-                onClick={() => goTo("/articulos/importar")}
-                className={`
-                  block w-full py-3 text-left text-sm
-                  ${
-                    pathname === "/articulos/importar"
-                      ? "font-semibold text-[#D8A814]"
-                      : "text-[#8F8F8F] hover:text-white"
-                  }
-                `}
-              >
-                Importar
-              </button>
-
-              <button
-                onClick={() => goTo("/articulos/estadisticas")}
-                className={`
-                  block w-full py-3 text-left text-sm
-                  ${
-                    pathname === "/articulos/estadisticas"
-                      ? "font-semibold text-[#D8A814]"
-                      : "text-[#8F8F8F] hover:text-white"
-                  }
-                `}
-              >
-                Estadísticas
               </button>
             </div>
           )}
@@ -288,12 +204,13 @@ export default function Sidebar() {
         {/* Stock */}
         <div className="mt-2">
           <button
-            onClick={() => setStockOpen(!stockOpen)}
+            onClick={() => (collapsed ? goTo("/stock") : setStockOpen(!stockOpen))}
+            title="Stock / Inventario"
             className={`
               flex h-12 w-full items-center
-              gap-3 border-l-2 px-4
-              text-left text-sm font-medium
-              transition-colors
+              border-l-2 transition-colors
+              ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
+              text-sm font-medium
               ${
                 pathname.startsWith("/stock")
                   ? "border-[#D8A814] text-[#D8A814]"
@@ -302,76 +219,26 @@ export default function Sidebar() {
             `}
           >
             <Boxes size={18} strokeWidth={1.8} />
-
-            <span className="flex-1">
-              Stock
-            </span>
-
-            <ChevronDown
-              size={15}
-              className={`
-                transition-transform duration-200
-                ${stockOpen ? "rotate-180" : ""}
-              `}
-            />
+            {!collapsed && (
+              <>
+                <span className="flex-1">Stock</span>
+                <ChevronDown
+                  size={15}
+                  className={`transition-transform duration-200 ${stockOpen ? "rotate-180" : ""}`}
+                />
+              </>
+            )}
           </button>
 
-          {stockOpen && (
+          {!collapsed && stockOpen && (
             <div className="ml-[27px] border-l border-[#2B2B2B] pl-5">
               <button
                 onClick={() => goTo("/stock")}
-                className={`
-                  block w-full py-3 text-left text-sm
-                  ${
-                    pathname === "/stock"
-                      ? "font-semibold text-[#D8A814]"
-                      : "text-[#8F8F8F] hover:text-white"
-                  }
-                `}
+                className={`block w-full py-2.5 text-left text-sm ${
+                  pathname === "/stock" ? "font-semibold text-[#D8A814]" : "text-[#8F8F8F] hover:text-white"
+                }`}
               >
                 Existencias
-              </button>
-
-              <button
-                onClick={() => goTo("/stock/movimientos")}
-                className={`
-                  block w-full py-3 text-left text-sm
-                  ${
-                    pathname === "/stock/movimientos"
-                      ? "font-semibold text-[#D8A814]"
-                      : "text-[#8F8F8F] hover:text-white"
-                  }
-                `}
-              >
-                Movimientos
-              </button>
-
-              <button
-                onClick={() => goTo("/stock/ajustes")}
-                className={`
-                  block w-full py-3 text-left text-sm
-                  ${
-                    pathname === "/stock/ajustes"
-                      ? "font-semibold text-[#D8A814]"
-                      : "text-[#8F8F8F] hover:text-white"
-                  }
-                `}
-              >
-                Ajustes
-              </button>
-
-              <button
-                onClick={() => goTo("/stock/alertas")}
-                className={`
-                  block w-full py-3 text-left text-sm
-                  ${
-                    pathname === "/stock/alertas"
-                      ? "font-semibold text-[#D8A814]"
-                      : "text-[#8F8F8F] hover:text-white"
-                  }
-                `}
-              >
-                Alertas
               </button>
             </div>
           )}
@@ -380,10 +247,12 @@ export default function Sidebar() {
         {/* Promociones */}
         <button
           onClick={() => goTo("/promociones")}
+          title="Promociones"
           className={`
             mt-2 flex h-12 w-full items-center
-            gap-3 border-l-2 px-4 text-left
-            text-sm font-medium transition-colors
+            border-l-2 transition-colors
+            ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
+            text-sm font-medium
             ${
               pathname.startsWith("/promociones")
                 ? "border-[#D8A814] bg-[#141414] text-[#D8A814]"
@@ -392,17 +261,18 @@ export default function Sidebar() {
           `}
         >
           <Tags size={18} strokeWidth={1.8} />
-
-          <span>Promociones</span>
+          {!collapsed && <span>Promociones</span>}
         </button>
 
         {/* Usuarios */}
         <button
           onClick={() => goTo("/usuarios")}
+          title="Usuarios"
           className={`
             mt-2 flex h-12 w-full items-center
-            gap-3 border-l-2 px-4 text-left
-            text-sm font-medium transition-colors
+            border-l-2 transition-colors
+            ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
+            text-sm font-medium
             ${
               pathname.startsWith("/usuarios")
                 ? "border-[#D8A814] bg-[#141414] text-[#D8A814]"
@@ -411,17 +281,18 @@ export default function Sidebar() {
           `}
         >
           <UserRoundCog size={18} strokeWidth={1.8} />
-
-          <span>Usuarios</span>
+          {!collapsed && <span>Usuarios</span>}
         </button>
 
         {/* Configuración */}
         <button
           onClick={() => goTo("/configuracion")}
+          title="Configuración"
           className={`
             mt-2 flex h-12 w-full items-center
-            gap-3 border-l-2 px-4 text-left
-            text-sm font-medium transition-colors
+            border-l-2 transition-colors
+            ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
+            text-sm font-medium
             ${
               pathname.startsWith("/configuracion")
                 ? "border-[#D8A814] bg-[#141414] text-[#D8A814]"
@@ -430,22 +301,25 @@ export default function Sidebar() {
           `}
         >
           <Settings size={18} strokeWidth={1.8} />
-
-          <span>Configuración</span>
+          {!collapsed && <span>Configuración</span>}
         </button>
 
         {/* Operaciones */}
-        <div className="mt-8">
-          <p className="mb-4 px-4 text-xs font-semibold uppercase tracking-[0.2em] text-[#777777]">
-            Operaciones
-          </p>
+        <div className="mt-6">
+          {!collapsed && (
+            <p className="mb-4 px-4 text-xs font-semibold uppercase tracking-[0.2em] text-[#777777]">
+              Operaciones
+            </p>
+          )}
 
           <button
             onClick={() => goTo("/ventas")}
+            title="Ventas"
             className={`
               flex h-12 w-full items-center
-              gap-3 border-l-2 px-4 text-left
-              text-sm font-medium transition-colors
+              border-l-2 transition-colors
+              ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
+              text-sm font-medium
               ${
                 pathname.startsWith("/ventas")
                   ? "border-[#D8A814] bg-[#141414] text-[#D8A814]"
@@ -454,34 +328,55 @@ export default function Sidebar() {
             `}
           >
             <ShoppingCart size={18} strokeWidth={1.8} />
-
-            <span>Ventas</span>
+            {!collapsed && <span>Ventas</span>}
           </button>
 
           <button
-        onClick={() => goTo("/tickets")}
-        className={`
-          flex h-12 w-full items-center
-          gap-3 border-l-2 px-4 text-left
-          text-sm font-medium transition-colors
-          ${
-            pathname.startsWith("/tickets")
-              ? "border-[#D8A814] bg-[#141414] text-[#D8A814]"
-              : "border-transparent text-[#C5C5C5] hover:text-white"
-          }
-        `}
-      >
-        <ReceiptText size={18} strokeWidth={1.8} />
+            onClick={() => goTo("/caja")}
+            title="Caja Registradora"
+            className={`
+              mt-2 flex h-12 w-full items-center
+              border-l-2 transition-colors
+              ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
+              text-sm font-medium
+              ${
+                pathname.startsWith("/caja")
+                  ? "border-[#D8A814] bg-[#141414] text-[#D8A814]"
+                  : "border-transparent text-[#C5C5C5] hover:text-white"
+              }
+            `}
+          >
+            <WalletCards size={18} strokeWidth={1.8} />
+            {!collapsed && <span>Caja Registradora</span>}
+          </button>
 
-        <span>Historial de tickets</span>
-      </button>
+          <button
+            onClick={() => goTo("/tickets")}
+            title="Historial de tickets"
+            className={`
+              mt-2 flex h-12 w-full items-center
+              border-l-2 transition-colors
+              ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
+              text-sm font-medium
+              ${
+                pathname.startsWith("/tickets")
+                  ? "border-[#D8A814] bg-[#141414] text-[#D8A814]"
+                  : "border-transparent text-[#C5C5C5] hover:text-white"
+              }
+            `}
+          >
+            <ReceiptText size={18} strokeWidth={1.8} />
+            {!collapsed && <span>Historial de tickets</span>}
+          </button>
 
           <button
             onClick={() => goTo("/reportes")}
+            title="Reportes"
             className={`
-              flex h-12 w-full items-center
-              gap-3 border-l-2 px-4 text-left
-              text-sm font-medium transition-colors
+              mt-2 flex h-12 w-full items-center
+              border-l-2 transition-colors
+              ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
+              text-sm font-medium
               ${
                 pathname.startsWith("/reportes")
                   ? "border-[#D8A814] bg-[#141414] text-[#D8A814]"
@@ -490,29 +385,25 @@ export default function Sidebar() {
             `}
           >
             <ChartNoAxesCombined size={18} strokeWidth={1.8} />
-
-            <span>Reportes</span>
+            {!collapsed && <span>Reportes</span>}
           </button>
         </div>
       </nav>
 
-      {/* Usuario */}
-      <div className="shrink-0 border-t border-[#262626] bg-[#050505] p-5">
-        <button className="flex w-full items-center gap-3">
-          <div className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[#D8A814] font-bold text-white">
+      {/* Usuario Footer */}
+      <div className="shrink-0 border-t border-[#262626] bg-[#050505] p-4">
+        <div className={`flex w-full items-center ${collapsed ? "justify-center" : "gap-3"}`}>
+          <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-[#D8A814] font-bold text-white">
             A
           </div>
 
-          <div className="min-w-0 text-left">
-            <p className="truncate text-sm font-semibold">
-              Adán Morales
-            </p>
-
-            <p className="text-xs text-[#D8A814]">
-              Supervisor
-            </p>
-          </div>
-        </button>
+          {!collapsed && (
+            <div className="min-w-0 text-left">
+              <p className="truncate text-sm font-semibold">Adán Morales</p>
+              <p className="text-xs text-[#D8A814]">Supervisor</p>
+            </div>
+          )}
+        </div>
       </div>
     </aside>
   );

@@ -16,6 +16,7 @@ import {
 
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import { useSidebar } from "@/context/SidebarContext";
 
 const users = [
   {
@@ -153,6 +154,7 @@ const permissionModules = [
 ];
 
 export default function UsuariosPage() {
+  const { collapsed } = useSidebar();
   const [activeTab, setActiveTab] = useState("Usuarios");
   const [selectedRole, setSelectedRole] = useState("Supervisor");
 
@@ -162,7 +164,7 @@ export default function UsuariosPage() {
     <main className="min-h-screen bg-[#F7F7F7]">
       <Sidebar />
 
-      <div className="ml-[250px] min-h-screen">
+      <div className={`min-h-screen transition-all duration-300 ${collapsed ? "ml-[80px]" : "ml-[250px]"}`}>
         <Header />
 
         <div className="p-10">

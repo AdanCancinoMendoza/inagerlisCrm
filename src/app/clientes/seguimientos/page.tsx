@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import { useSidebar } from "@/context/SidebarContext";
 
 const followUps = [
   {
@@ -52,6 +53,7 @@ const followUps = [
 ];
 
 export default function SeguimientosPage() {
+  const { collapsed } = useSidebar();
   const [activeFilter, setActiveFilter] = useState("Todos");
 
   const filters = [
@@ -66,7 +68,7 @@ export default function SeguimientosPage() {
     <main className="min-h-screen bg-[#F7F7F7]">
       <Sidebar />
 
-      <div className="ml-[250px] min-h-screen">
+      <div className={`min-h-screen transition-all duration-300 ${collapsed ? "ml-[80px]" : "ml-[250px]"}`}>
         <Header />
 
         <div className="p-10">

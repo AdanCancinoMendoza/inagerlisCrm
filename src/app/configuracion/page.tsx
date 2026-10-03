@@ -3,6 +3,9 @@
 import { useState } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import { COLOR_PALETTES, useTheme } from "@/context/ThemeContext";
+import { useSidebar } from "@/context/SidebarContext";
+import { Check } from "lucide-react";
 
 const branches = [
   {
@@ -63,6 +66,8 @@ const terminals = [
 ];
 
 export default function ConfiguracionPage() {
+  const { collapsed } = useSidebar();
+  const { activePalette, setPalette } = useTheme();
   const [activeTab, setActiveTab] = useState("General");
 
   const tabs = [
@@ -77,7 +82,7 @@ export default function ConfiguracionPage() {
     <main className="min-h-screen bg-[#F7F7F7]">
       <Sidebar />
 
-      <div className="ml-[250px] min-h-screen">
+      <div className={`min-h-screen transition-all duration-300 ${collapsed ? "ml-[80px]" : "ml-[250px]"}`}>
         <Header />
 
         <div className="p-10">
@@ -523,75 +528,130 @@ export default function ConfiguracionPage() {
 
           {/* PREFERENCIAS */}
           {activeTab === "Preferencias" && (
-            <section className="border border-[#E2E2E2] bg-white">
-              <div className="border-b border-[#E5E5E5] px-8 py-6">
+            <div className="space-y-6">
+              {/* Gama de Colores */}
+              <section className="border border-[#E2E2E2] bg-white p-8">
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#D8A814]">
-                  Sistema
+                  Personalización Visual
+                </p>
+                <h2 className="mt-1 text-xl font-bold text-black">
+                  Gama de Colores e Identidad del Sistema
+                </h2>
+                <p className="mt-1 text-sm text-[#777777]">
+                  Selecciona la paleta de color principal que adaptará automáticamente el color del sistema entero (CRM + Punto de Venta).
                 </p>
 
-                <h2 className="mt-1 text-xl font-bold text-black">
-                  Preferencias generales
-                </h2>
-              </div>
+                <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+                  {COLOR_PALETTES.map((p) => {
+                    const isSelected = activePalette.id === p.id;
 
-              <div className="divide-y divide-[#EEEEEE]">
-                {[
-                  {
-                    title: "Permitir ventas sin cliente",
-                    description:
-                      "Permite realizar una venta sin asociarla a un cliente.",
-                  },
-                  {
-                    title: "Solicitar cliente en cada venta",
-                    description:
-                      "Solicita seleccionar o registrar un cliente antes de continuar.",
-                  },
-                  {
-                    title: "Aplicar impuestos automáticamente",
-                    description:
-                      "Usa los impuestos configurados en los artículos y servicios.",
-                  },
-                  {
-                    title: "Permitir terminales inactivas",
-                    description:
-                      "Impide el acceso al POS desde terminales desactivadas.",
-                  },
-                ].map((item, index) => (
-                  <div
-                    key={item.title}
-                    className="flex items-center justify-between px-8 py-6"
-                  >
-                    <div>
-                      <p className="font-bold text-black">
-                        {item.title}
-                      </p>
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setPalette(p.id)}
+                        className={`group relative flex flex-col items-center justify-between p-4 border text-center transition-all ${
+                          isSelected
+                            ? "border-2 border-black bg-white shadow-md ring-2 ring-black/10"
+                            : "border-[#EEEEEE] bg-[#FAFAFA] hover:border-[#CCCCCC] hover:bg-white"
+                        }`}
+                      >
+                        {/* Theme preview swatch */}
+                        <div className="w-full rounded border border-[#E5E5E5] overflow-hidden mb-3">
+                          <div
+                            className="h-4 w-full flex items-center justify-end px-1"
+                            style={{ backgroundColor: p.darkBg }}
+                          >
+                            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: p.hex }} />
+                          </div>
+                          <div className="h-7 w-full flex items-center justify-center p-1" style={{ backgroundColor: p.light }}>
+                            <div
+                              className="flex h-5 w-5 items-center justify-center rounded-full text-white font-bold text-[10px] shadow-sm"
+                              style={{ backgroundColor: p.hex }}
+                            >
+                              {isSelected && <Check size={12} />}
+                            </div>
+                          </div>
+                        </div>
 
-                      <p className="mt-1 text-sm text-[#777777]">
-                        {item.description}
-                      </p>
-                    </div>
+                        <p className="text-xs font-bold text-black">{p.name}</p>
+                        <span className="mt-1 text-[10px] font-mono text-[#777777] uppercase">{p.hex}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
 
-                    <button
-                      className={`
-                        relative h-7 w-12
-                        ${index !== 3 ? "bg-[#D8A814]" : "bg-[#CCCCCC]"}
-                      `}
+              <section className="border border-[#E2E2E2] bg-white">
+                <div className="border-b border-[#E5E5E5] px-8 py-6">
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#D8A814]">
+                    Sistema
+                  </p>
+
+                  <h2 className="mt-1 text-xl font-bold text-black">
+                    Preferencias generales
+                  </h2>
+                </div>
+
+                <div className="divide-y divide-[#EEEEEE]">
+                  {[
+                    {
+                      title: "Permitir ventas sin cliente",
+                      description:
+                        "Permite realizar una venta sin asociarla a un cliente.",
+                    },
+                    {
+                      title: "Solicitar cliente en cada venta",
+                      description:
+                        "Solicita seleccionar o registrar un cliente antes de continuar.",
+                    },
+                    {
+                      title: "Aplicar impuestos automáticamente",
+                      description:
+                        "Usa los impuestos configurados en los artículos y servicios.",
+                    },
+                    {
+                      title: "Permitir terminales inactivas",
+                      description:
+                        "Impide el acceso al POS desde terminales desactivadas.",
+                    },
+                  ].map((item, index) => (
+                    <div
+                      key={item.title}
+                      className="flex items-center justify-between px-8 py-6"
                     >
-                      <span
+                      <div>
+                        <p className="font-bold text-black">
+                          {item.title}
+                        </p>
+
+                        <p className="mt-1 text-sm text-[#777777]">
+                          {item.description}
+                        </p>
+                      </div>
+
+                      <button
                         className={`
-                          absolute top-1 h-5 w-5 bg-white
-                          ${
-                            index !== 3
-                              ? "left-6"
-                              : "left-1"
-                          }
+                          relative h-7 w-12
+                          ${index !== 3 ? "bg-[#D8A814]" : "bg-[#CCCCCC]"}
                         `}
-                      />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </section>
+                      >
+                        <span
+                          className={`
+                            absolute top-1 h-5 w-5 bg-white
+                            ${
+                              index !== 3
+                                ? "left-6"
+                                : "left-1"
+                            }
+                          `}
+                        />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
           )}
         </div>
       </div>

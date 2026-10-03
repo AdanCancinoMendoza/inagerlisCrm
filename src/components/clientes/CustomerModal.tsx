@@ -1,19 +1,56 @@
 "use client";
 
+import { useState } from "react";
+
 interface CustomerModalProps {
   open: boolean;
   onClose: () => void;
+  onSave?: (customerData: {
+    nombre: string;
+    telefono: string;
+    rfc: string;
+    localidad: string;
+  }) => void;
 }
 
 export default function CustomerModal({
   open,
   onClose,
+  onSave,
 }: CustomerModalProps) {
+  const [nombre, setNombre] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [rfc, setRfc] = useState("");
+  const [localidad, setLocalidad] = useState("");
+
   if (!open) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nombre.trim()) return;
+
+    if (onSave) {
+      onSave({
+        nombre,
+        telefono,
+        rfc,
+        localidad,
+      });
+    }
+
+    setNombre("");
+    setTelefono("");
+    setRfc("");
+    setLocalidad("");
+    onClose();
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-      <div className="w-full max-w-[600px] border border-[#D8A814] bg-white">
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-[600px] border border-[#D8A814] bg-white"
+      >
         <div className="flex items-start justify-between border-b border-[#E5E5E5] px-8 py-6">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#D8A814]">
@@ -26,6 +63,7 @@ export default function CustomerModal({
           </div>
 
           <button
+            type="button"
             onClick={onClose}
             className="text-2xl text-[#777777] hover:text-black"
           >
@@ -40,6 +78,9 @@ export default function CustomerModal({
             </label>
 
             <input
+              required
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
               placeholder="Nombre completo"
               className="h-12 w-full border border-[#D8A814] px-4 text-black outline-none focus:border-black"
             />
@@ -47,10 +88,12 @@ export default function CustomerModal({
 
           <div>
             <label className="mb-2 block text-sm font-bold text-black">
-              Teléfono *
+              Teléfono
             </label>
 
             <input
+              value={telefono}
+              onChange={(e) => setTelefono(e.target.value)}
               placeholder="222 000 0000"
               className="h-12 w-full border border-[#D8A814] px-4 text-black outline-none focus:border-black"
             />
@@ -62,6 +105,8 @@ export default function CustomerModal({
             </label>
 
             <input
+              value={rfc}
+              onChange={(e) => setRfc(e.target.value)}
               placeholder="Opcional"
               className="h-12 w-full border border-[#D8A814] px-4 uppercase text-black outline-none focus:border-black"
             />
@@ -73,6 +118,8 @@ export default function CustomerModal({
             </label>
 
             <input
+              value={localidad}
+              onChange={(e) => setLocalidad(e.target.value)}
               placeholder="Ej. Puebla, Puebla"
               className="h-12 w-full border border-[#D8A814] px-4 text-black outline-none focus:border-black"
             />
@@ -81,17 +128,21 @@ export default function CustomerModal({
 
         <div className="flex justify-end gap-3 border-t border-[#E5E5E5] px-8 py-5">
           <button
+            type="button"
             onClick={onClose}
             className="h-12 border border-black px-7 font-bold text-black hover:bg-black hover:text-white"
           >
             Cancelar
           </button>
 
-          <button className="h-12 bg-[#D8A814] px-7 font-bold text-white hover:bg-black">
+          <button
+            type="submit"
+            className="h-12 bg-[#D8A814] px-7 font-bold text-white hover:bg-black"
+          >
             Guardar cliente
           </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }

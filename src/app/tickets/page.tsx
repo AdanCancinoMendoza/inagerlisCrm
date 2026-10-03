@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CalendarDays,
   CreditCard,
@@ -11,10 +11,13 @@ import {
   RotateCcw,
   Search,
   X,
+  Zap,
 } from "lucide-react";
 
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import { useSocket } from "@/hooks/useSocket";
+import { useSidebar } from "@/context/SidebarContext";
 
 type TicketStatus = "Pagado" | "Devuelto" | "Cancelado";
 
@@ -25,7 +28,7 @@ interface TicketItem {
 }
 
 interface Ticket {
-  id: number;
+  id: number | string;
   folio: string;
   date: string;
   time: string;
@@ -41,6 +44,7 @@ interface Ticket {
   status: TicketStatus;
   items: TicketItem[];
 }
+
 
 const tickets: Ticket[] = [
   {
@@ -161,6 +165,7 @@ const tickets: Ticket[] = [
 ];
 
 export default function TicketsPage() {
+  const { collapsed } = useSidebar();
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [search, setSearch] = useState("");
 
@@ -192,7 +197,7 @@ export default function TicketsPage() {
     <main className="min-h-screen bg-[#F7F7F7]">
       <Sidebar />
 
-      <div className="ml-[250px] min-h-screen">
+      <div className={`min-h-screen transition-all duration-300 ${collapsed ? "ml-[80px]" : "ml-[250px]"}`}>
         <Header />
 
         <div className="p-10">

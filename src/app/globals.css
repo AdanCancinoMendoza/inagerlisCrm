@@ -4,8 +4,17 @@
   --background: #ffffff;
   --foreground: #0a0a0a;
 
-  --gold: #d4a514;
-  --gold-hover: #bd920f;
+  /* Accent Theme System Defaults */
+  --primary: #D8A814;
+  --primary-hover: #B88E0E;
+  --primary-light: #FEF8E7;
+  --primary-alpha: rgba(216, 168, 20, 0.15);
+  --primary-text: #ffffff;
+  --dark-bg: #050505;
+  --dark-border: #262626;
+
+  --gold: var(--primary);
+  --gold-hover: var(--primary-hover);
 
   --black: #050505;
   --white: #ffffff;
@@ -26,4 +35,62 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* System Theme Color Helper Utilities */
+.bg-theme-primary {
+  background-color: var(--primary) !important;
+}
+
+.text-theme-primary {
+  color: var(--primary) !important;
+}
+
+.border-theme-primary {
+  border-color: var(--primary) !important;
+}
+
+.bg-theme-light {
+  background-color: var(--primary-light) !important;
+}
+
+/* Precise legacy class overrides to map #D8A814 classes to dynamic active theme */
+.bg-\[\#D8A814\] {
+  background-color: var(--primary) !important;
+}
+
+.text-\[\#D8A814\] {
+  color: var(--primary) !important;
+}
+
+.border-\[\#D8A814\] {
+  border-color: var(--primary) !important;
+}
+
+.border-l-\[\#D8A814\] {
+  border-left-color: var(--primary) !important;
+}
+
+.border-b-\[\#D8A814\] {
+  border-bottom-color: var(--primary) !important;
+}
+
+.hover\:bg-\[\#D8A814\]:hover {
+  background-color: var(--primary) !important;
+}
+
+.hover\:text-\[\#D8A814\]:hover {
+  color: var(--primary) !important;
+}
+
+.hover\:border-\[\#D8A814\]:hover {
+  border-color: var(--primary) !important;
+}
+
+.focus\:border-\[\#D8A814\]:focus {
+  border-color: var(--primary) !important;
+}
+
+.accent-\[\#D8A814\] {
+  accent-color: var(--primary) !important;
 }

@@ -31,6 +31,7 @@ import {
 
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import { useSidebar } from "@/context/SidebarContext";
 
 /* =========================================================
    DATOS DE PRUEBA
@@ -176,6 +177,7 @@ type Metric = "units" | "sales" | "profit";
 type GeneralChart = "line" | "bar";
 
 export default function VentasPage() {
+  const { collapsed } = useSidebar();
   const [productModalOpen, setProductModalOpen] = useState(false);
 
   const [selectedProduct, setSelectedProduct] = useState(products[0]);
@@ -226,7 +228,7 @@ export default function VentasPage() {
     <main className="min-h-screen bg-[#F7F7F7]">
       <Sidebar />
 
-      <div className="ml-[250px] min-h-screen">
+      <div className={`min-h-screen transition-all duration-300 ${collapsed ? "ml-[80px]" : "ml-[250px]"}`}>
         <Header />
 
         <div className="p-10">
@@ -796,52 +798,54 @@ export default function VentasPage() {
               </p>
             </div>
 
-            {products.map((product) => (
-              <button
-                key={product.id}
-                onClick={() => {
-                  setSelectedProduct(product);
-                  window.scrollTo({
-                    top: 600,
-                    behavior: "smooth",
-                  });
-                }}
-                className="grid w-full grid-cols-[2fr_.8fr_.8fr_.8fr_.9fr_.9fr] items-center border-t border-[#EEEEEE] px-6 py-5 text-left hover:bg-[#FAFAFA]"
-              >
-                <div>
-                  <p className="font-bold text-black">
-                    {product.name}
+            <div className="max-h-[380px] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-[#D8A814] [&::-webkit-scrollbar-track]:bg-[#F2F2F2]">
+              {products.map((product) => (
+                <button
+                  key={product.id}
+                  onClick={() => {
+                    setSelectedProduct(product);
+                    window.scrollTo({
+                      top: 600,
+                      behavior: "smooth",
+                    });
+                  }}
+                  className="grid w-full grid-cols-[2fr_.8fr_.8fr_.8fr_.9fr_.9fr] items-center border-t border-[#EEEEEE] px-6 py-5 text-left hover:bg-[#FAFAFA]"
+                >
+                  <div>
+                    <p className="font-bold text-black">
+                      {product.name}
+                    </p>
+
+                    <p className="mt-1 text-xs text-[#999999]">
+                      {product.code}
+                    </p>
+                  </div>
+
+                  <p className="text-right text-sm text-[#666666]">
+                    ${product.purchasePrice.toFixed(2)}
                   </p>
 
-                  <p className="mt-1 text-xs text-[#999999]">
-                    {product.code}
+                  <p className="text-right font-bold text-black">
+                    ${product.salePrice.toFixed(2)}
                   </p>
-                </div>
 
-                <p className="text-right text-sm text-[#666666]">
-                  ${product.purchasePrice.toFixed(2)}
-                </p>
+                  <p className="text-right font-semibold text-black">
+                    {product.units.toLocaleString()}
+                  </p>
 
-                <p className="text-right font-bold text-black">
-                  ${product.salePrice.toFixed(2)}
-                </p>
+                  <p className="text-right font-bold text-black">
+                    ${product.revenue.toLocaleString()}
+                  </p>
 
-                <p className="text-right font-semibold text-black">
-                  {product.units.toLocaleString()}
-                </p>
-
-                <p className="text-right font-bold text-black">
-                  ${product.revenue.toLocaleString()}
-                </p>
-
-                <p className="text-right font-bold text-[#D8A814]">
-                  $
-                  {product.profit.toLocaleString(undefined, {
-                    maximumFractionDigits: 2,
-                  })}
-                </p>
-              </button>
-            ))}
+                  <p className="text-right font-bold text-[#D8A814]">
+                    $
+                    {product.profit.toLocaleString(undefined, {
+                      maximumFractionDigits: 2,
+                    })}
+                  </p>
+                </button>
+              ))}
+            </div>
           </section>
         </div>
       </div>

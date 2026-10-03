@@ -13,6 +13,7 @@ import {
 
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import { useSidebar } from "@/context/SidebarContext";
 
 const tabs = ["Ventas", "Clientes", "Artículos", "Inventario"];
 
@@ -143,6 +144,7 @@ const inventoryRows = [
 ];
 
 export default function ReportesPage() {
+  const { collapsed } = useSidebar();
   const [activeTab, setActiveTab] = useState("Ventas");
 
   const money = (value: number) =>
@@ -155,7 +157,7 @@ export default function ReportesPage() {
     <main className="min-h-screen bg-[#F7F7F7]">
       <Sidebar />
 
-      <div className="ml-[250px] min-h-screen">
+      <div className={`min-h-screen transition-all duration-300 ${collapsed ? "ml-[80px]" : "ml-[250px]"}`}>
         <Header />
 
         <div className="p-10">
