@@ -20,15 +20,21 @@ import {
   WalletCards,
   X,
   CheckCircle2,
+  RefreshCw,
+  ShieldAlert,
 } from "lucide-react";
+import { apiRequest } from "@/services/api";
+import { getOrganizacionId, getUsuarioActual, hasPosPermiso } from "@/services/auth";
+import { useSocket } from "@/hooks/useSocket";
 
 type Product = {
-  id: number;
+  id: string | number;
   code: string;
   name: string;
   price: number;
   family: string;
-  image?: string;
+  unit?: string;
+  image?: string | null;
 };
 
 type CartItem = Product & {
@@ -97,8 +103,10 @@ const fallbackProducts: Product[] = [
 export default function POSPage() {
   const router = useRouter();
   const searchRef = useRef<HTMLInputElement>(null);
+  const { socket } = useSocket();
 
   const [products, setProducts] = useState<Product[]>(fallbackProducts);
+  const [loadingProducts, setLoadingProducts] = useState(false);
   const [selectedFamily, setSelectedFamily] = useState<string>("Todos");
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -106,6 +114,58 @@ export default function POSPage() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"efectivo" | "tarjeta" | "otro">("efectivo");
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+
+  const loadOrgProducts = async () => {
+    const usuario = getUsuarioActual();
+    const orgId = getOrganizacionId() || usuario?.organizacionId;
+    if (!orgId) return;
+
+    setLoadingProducts(true);
+    try {
+      const remoteArts = await apiRequest<any[]>(`/articulos/organizacion/${orgId}`);
+      if (Array.isArray(remoteArts) && remoteArts.length > 0) {
+        const mapped: Product[] = remoteArts.map((a) => ({
+          id: a.id,
+          code: a.codigo,
+          name: a.nombre,
+          price: Number(a.precioVenta) || 0,
+          family: a.familia?.nombre || "General",
+          unit: a.unidad,
+          image: a.imagen,
+        }));
+        setProducts(mapped);
+      }
+    } catch {
+      // Mantiene los datos en memoria si hay error de red
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  useEffect(() => {
+    loadOrgProducts();
+  }, []);
+
+  // 🔄 Sincronización en tiempo real vía Socket.io para el POS
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleActualizarCatalogo = () => {
+      loadOrgProducts();
+    };
+
+    socket.on("articulo:creado", handleActualizarCatalogo);
+    socket.on("articulo:actualizado", handleActualizarCatalogo);
+    socket.on("articulo:eliminado", handleActualizarCatalogo);
+    socket.on("catalogo:precargado", handleActualizarCatalogo);
+
+    return () => {
+      socket.off("articulo:creado", handleActualizarCatalogo);
+      socket.off("articulo:actualizado", handleActualizarCatalogo);
+      socket.off("articulo:eliminado", handleActualizarCatalogo);
+      socket.off("catalogo:precargado", handleActualizarCatalogo);
+    };
+  }, [socket]);
 
   const money = (value: number) =>
     `$${value.toLocaleString("es-MX", {
@@ -129,7 +189,7 @@ export default function POSPage() {
     });
   };
 
-  const changeQuantity = (id: number, delta: number) => {
+  const changeQuantity = (id: string | number, delta: number) => {
     setCart((current) =>
       current
         .map((item) => {
@@ -142,7 +202,7 @@ export default function POSPage() {
     );
   };
 
-  const removeProduct = (id: number) => {
+  const removeProduct = (id: string | number) => {
     setCart((current) => current.filter((item) => item.id !== id));
   };
 
@@ -202,6 +262,31 @@ export default function POSPage() {
       setIsPaymentModalOpen(false);
     }, 1500);
   };
+
+  const puedeCancelar = typeof window !== "undefined" ? hasPosPermiso("cancelarVenta") : true;
+  const tieneAcceso = typeof window !== "undefined" ? hasPosPermiso("acceso") : true;
+
+  if (!tieneAcceso) {
+    return (
+      <main className="min-h-screen bg-[#F7F7F7] flex flex-col items-center justify-center p-6 text-center">
+        <div className="max-w-md border border-[#D8A814] bg-white p-8 shadow-xl">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-red-600 mb-4">
+            <ShieldAlert size={32} />
+          </div>
+          <h1 className="text-xl font-bold text-black">Acceso No Autorizado</h1>
+          <p className="mt-2 text-sm text-[#666]">
+            Tu perfil de usuario no cuenta con permisos para operar en el Punto de Venta (POS). Contacta a un administrador para habilitar el acceso.
+          </p>
+          <button
+            onClick={() => router.push("/inicio")}
+            className="mt-6 inline-flex h-11 items-center justify-center bg-black px-6 text-sm font-bold text-white hover:bg-[#D8A814] transition-colors"
+          >
+            Volver al CRM
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#F7F7F7] text-black">
@@ -276,8 +361,19 @@ export default function POSPage() {
                   className="group flex flex-col justify-between rounded-xl border border-[#E5E7EB] bg-white p-3.5 text-left shadow-xs transition-all hover:border-[var(--primary)] hover:shadow-md hover:-translate-y-0.5"
                 >
                   <div className="flex items-start justify-between gap-1">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--primary-light)] text-[var(--primary)] group-hover:scale-105 transition-transform">
-                      <Package size={17} />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--primary-light)] text-[var(--primary)] group-hover:scale-105 transition-transform overflow-hidden border border-[#EEEEEE]">
+                      {product.image ? (
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="h-full w-full object-contain p-0.5"
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <Package size={18} />
+                      )}
                     </div>
 
                     <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#F3F4F6] text-[#6B7280] group-hover:bg-[var(--primary)] group-hover:text-white transition-colors">
@@ -318,7 +414,7 @@ export default function POSPage() {
               </p>
             </div>
 
-            {cart.length > 0 && (
+            {cart.length > 0 && puedeCancelar && (
               <button
                 onClick={() => setCart([])}
                 className="flex items-center gap-1.5 text-xs font-semibold text-[#EF4444] hover:underline"

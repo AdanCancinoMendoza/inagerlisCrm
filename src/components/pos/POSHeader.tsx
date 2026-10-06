@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { getNombrePerfil, getUsuarioActual } from "@/services/auth";
 import {
   ChevronDown,
   Cpu,
@@ -27,6 +28,18 @@ export default function POSHeader({
 }: POSHeaderProps) {
   const router = useRouter();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [usuario, setUsuario] = useState<any>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const u = getUsuarioActual();
+      setUsuario(u);
+    }
+  }, []);
+
+  const nombreUsuario = usuario?.nombre || "Usuario";
+  const inicial = (nombreUsuario || "U").charAt(0).toUpperCase();
+  const nombrePerfil = getNombrePerfil(usuario);
 
   return (
     <>
@@ -50,7 +63,7 @@ export default function POSHeader({
             <p className="text-[10px] uppercase tracking-wider text-[#777777]">
               Sucursal
             </p>
-            <p className="mt-1 text-sm font-semibold">Centro</p>
+            <p className="mt-1 text-sm font-semibold">{usuario?.sucursal?.nombre || "Centro"}</p>
           </div>
 
           <div className="h-8 w-px bg-[var(--dark-border)]" />
@@ -59,7 +72,7 @@ export default function POSHeader({
             <p className="text-[10px] uppercase tracking-wider text-[#777777]">
               Terminal
             </p>
-            <p className="mt-1 text-sm font-semibold text-[#D8A814]">Caja 02</p>
+            <p className="mt-1 text-sm font-semibold text-[#D8A814]">Caja 01</p>
           </div>
 
           <div className="h-8 w-px bg-[#262626]" />
@@ -84,12 +97,12 @@ export default function POSHeader({
               className="flex items-center gap-3 text-left"
             >
               <div>
-                <p className="text-right text-sm font-bold">Adán Morales</p>
-                <p className="mt-1 text-right text-xs text-[#D8A814]">Cajero</p>
+                <p className="text-right text-sm font-bold">{nombreUsuario}</p>
+                <p className="mt-1 text-right text-xs text-[#D8A814]">{nombrePerfil}</p>
               </div>
 
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#D8A814] font-bold">
-                A
+                {inicial}
               </div>
 
               <ChevronDown
