@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function CampanasAliasPage() {
-  redirect("/campañas");
+  redirect("/promociones");
 }
