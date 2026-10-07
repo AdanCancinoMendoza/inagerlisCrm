@@ -32,6 +32,7 @@ import {
   CreditCard,
   Banknote,
   Percent,
+  QrCode,
 } from "lucide-react";
 import {
   Bar,
@@ -912,6 +913,13 @@ export default function VentasPage() {
                       >
                         Cambiar Número
                       </button>
+                      <a
+                        href="/promociones"
+                        className="h-9 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold uppercase tracking-wider px-3.5 rounded transition-colors flex items-center gap-1.5 shadow-2xs"
+                      >
+                        <QrCode size={14} />
+                        <span>Vincular Celular por QR</span>
+                      </a>
                     </div>
                   ) : (
                     <form onSubmit={handleGuardarWhatsappOrg} className="flex items-center gap-2">

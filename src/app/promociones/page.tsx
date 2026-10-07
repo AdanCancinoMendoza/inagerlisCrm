@@ -29,6 +29,10 @@ import {
   Settings,
   ShoppingBag,
   ExternalLink,
+  QrCode,
+  ShieldCheck,
+  Power,
+  Zap,
 } from "lucide-react";
 
 import Sidebar from "@/components/layout/Sidebar";
@@ -73,7 +77,7 @@ type OrganizacionData = {
   email?: string | null;
 };
 
-type ResultadoEnvio = {
+type ResultadoEnvioManual = {
   exito: boolean;
   totalClientes: number;
   destinatarios: {
@@ -144,11 +148,31 @@ export default function PromocionesPage() {
   const [campanas, setCampanas] = useState<CampanaItem[]>([]);
   const [articulos, setArticulos] = useState<ArticuloItem[]>([]);
 
+  // Estados de WhatsApp Baileys en Tiempo Real
+  const [whatsappEstado, setWhatsappEstado] = useState<"DESCONECTADO" | "GENERANDO_QR" | "CONECTADO">("DESCONECTADO");
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [infoConexion, setInfoConexion] = useState<{ telefono?: string; nombre?: string } | null>(null);
+  const [cargandoQr, setCargandoQr] = useState(false);
+  const [desconectando, setDesconectando] = useState(false);
+  const [telefonoPrueba, setTelefonoPrueba] = useState("");
+  const [enviandoPrueba, setEnviandoPrueba] = useState(false);
+  const [alertaPrueba, setAlertaPrueba] = useState<string | null>(null);
+
   // Estados de Modales
   const [modalCampanaOpen, setModalCampanaOpen] = useState(false);
   const [modalWhatsappOpen, setModalWhatsappOpen] = useState(false);
   const [modalDetalleCampana, setModalDetalleCampana] = useState<CampanaItem | null>(null);
-  const [modalResultado, setModalResultado] = useState<ResultadoEnvio | null>(null);
+  const [modalResultadoManual, setModalResultadoManual] = useState<ResultadoEnvioManual | null>(null);
+  const [modalProgresoOpen, setModalProgresoOpen] = useState(false);
+
+  // Estado de Progreso de Campaña Automática en Segundo Plano
+  const [progresoCampana, setProgresoCampana] = useState<{
+    campanaId?: string;
+    total: number;
+    enviados: number;
+    clienteActual?: string;
+    finalizada: boolean;
+  }>({ total: 0, enviados: 0, finalizada: false });
 
   // Estados de Formulario de Campaña
   const [tipoCampana, setTipoCampana] = useState<string>("articulo");
@@ -162,18 +186,27 @@ export default function PromocionesPage() {
   const [busquedaCliente, setBusquedaCliente] = useState("");
   const [enviandoCampana, setEnviandoCampana] = useState(false);
 
-  // Estados de Configuración de WhatsApp de Organización
-  const [nuevoWhatsappOrg, setNuevoWhatsappOrg] = useState("");
-  const [guardandoWhatsapp, setGuardandoWhatsapp] = useState(false);
-  const [alertaExitoWhatsapp, setAlertaExitoWhatsapp] = useState(false);
-
   // Conexión Socket para eventos en tiempo real
   const orgIdStored = typeof window !== "undefined" ? getOrganizacionId() : "";
   const { socket } = useSocket(orgIdStored ? `org_${orgIdStored}` : "");
 
   /* =========================================================
-     CARGA DE DATOS
+     CARGA DE DATOS & ESTADO DE WHATSAPP
   ========================================================= */
+  const cargarEstadoWhatsapp = async (orgId?: string | null) => {
+    try {
+      const res = await apiRequest<any>(`/whatsapp/estado/${orgId || "default"}`);
+      setWhatsappEstado(res.estado);
+      if (res.qrCode) setQrCodeUrl(res.qrCode);
+      if (res.info) setInfoConexion(res.info);
+      if (res.numeroGuardado && orgData && !orgData.whatsapp) {
+        setOrgData((prev) => (prev ? { ...prev, whatsapp: res.numeroGuardado } : prev));
+      }
+    } catch (err) {
+      console.warn("No se pudo obtener estado de WhatsApp:", err);
+    }
+  };
+
   const cargarDatos = async () => {
     setCargando(true);
     try {
@@ -187,7 +220,6 @@ export default function PromocionesPage() {
             ? orgsRes.find((o) => o.id === orgId) || orgsRes[0]
             : orgsRes[0];
           setOrgData(orgEncontrada);
-          setNuevoWhatsappOrg(orgEncontrada.whatsapp || orgEncontrada.telefono || "");
         }
       } catch (err) {
         console.warn("No se pudo cargar organización:", err);
@@ -226,6 +258,9 @@ export default function PromocionesPage() {
       } catch (err) {
         console.warn("No se pudieron cargar artículos:", err);
       }
+
+      // Consultar estado de WhatsApp
+      await cargarEstadoWhatsapp(orgId);
     } catch (e) {
       console.error("Error al cargar datos en Promociones:", e);
     } finally {
@@ -237,15 +272,60 @@ export default function PromocionesPage() {
     cargarDatos();
   }, []);
 
-  // Escucha Socket
+  // Escucha de Eventos WebSocket en Tiempo Real
   useEffect(() => {
     if (!socket) return;
+
     const handleVenta = () => {
       cargarDatos();
     };
+
+    const handleWhatsappQr = (data: any) => {
+      setQrCodeUrl(data.qrCode);
+      setWhatsappEstado("GENERANDO_QR");
+      setCargandoQr(false);
+    };
+
+    const handleWhatsappConectado = (data: any) => {
+      setWhatsappEstado("CONECTADO");
+      setQrCodeUrl(null);
+      setInfoConexion({ telefono: data.telefono, nombre: data.usuario?.nombre });
+      setOrgData((prev) => (prev ? { ...prev, whatsapp: data.telefono } : prev));
+      setCargandoQr(false);
+      cargarDatos();
+    };
+
+    const handleWhatsappDesconectado = () => {
+      setWhatsappEstado("DESCONECTADO");
+      setQrCodeUrl(null);
+      setInfoConexion(null);
+    };
+
+    const handleCampanaProgreso = (data: any) => {
+      setProgresoCampana({
+        campanaId: data.campanaId,
+        total: data.total,
+        enviados: data.enviados,
+        clienteActual: data.cliente,
+        finalizada: data.estado === "FINALIZADA",
+      });
+      if (data.estado === "FINALIZADA") {
+        cargarDatos();
+      }
+    };
+
     socket.on("venta:creada", handleVenta);
+    socket.on("whatsapp:qr", handleWhatsappQr);
+    socket.on("whatsapp:conectado", handleWhatsappConectado);
+    socket.on("whatsapp:desconectado", handleWhatsappDesconectado);
+    socket.on("campana:progreso", handleCampanaProgreso);
+
     return () => {
       socket.off("venta:creada", handleVenta);
+      socket.off("whatsapp:qr", handleWhatsappQr);
+      socket.off("whatsapp:conectado", handleWhatsappConectado);
+      socket.off("whatsapp:desconectado", handleWhatsappDesconectado);
+      socket.off("campana:progreso", handleCampanaProgreso);
     };
   }, [socket]);
 
@@ -292,7 +372,7 @@ export default function PromocionesPage() {
   ========================================================= */
   const totalCampanasCreadas = campanas.length;
   const campanasActivasCount = campanas.filter(
-    (c) => c.estado === "ACTIVA" || c.estado === "ENVIADA"
+    (c) => c.estado === "ACTIVA" || c.estado === "ENVIADA" || c.estado === "EN_PROCESO"
   ).length;
   const totalMensajesEnviados = campanas.reduce(
     (acc, c) => acc + (c.enviados || c.totalDestinatarios || 0),
@@ -366,7 +446,7 @@ export default function PromocionesPage() {
       };
 
     const orgNombre = orgData?.nombre || "Nuestra Empresa";
-    const orgWhatsapp = orgData?.whatsapp || orgData?.telefono || "+52 249 153 7727";
+    const orgWhatsapp = infoConexion?.telefono || orgData?.whatsapp || orgData?.telefono || "+52 249 153 7727";
     const artNombre = articuloSeleccionado?.nombre || "Producto en Promoción";
     const artPrecio = articuloSeleccionado
       ? `$${Number(articuloSeleccionado.precioVenta).toFixed(2)}`
@@ -385,45 +465,87 @@ export default function PromocionesPage() {
     clientes,
     clientesSeleccionadosIds,
     orgData,
+    infoConexion,
     articuloSeleccionado,
     descuentoPorcentaje,
   ]);
 
   /* =========================================================
-     GUARDAR WHATSAPP DE LA ORGANIZACIÓN
+     ACCIONES DE VINCULACIÓN WHATSAPP POR CÓDIGO QR
   ========================================================= */
-  const handleGuardarWhatsappOrg = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!orgData?.id) return;
-    setGuardandoWhatsapp(true);
+  const handleAbrirModalWhatsapp = async () => {
+    setModalWhatsappOpen(true);
+    if (whatsappEstado !== "CONECTADO") {
+      iniciarGeneracionQR();
+    }
+  };
+
+  const iniciarGeneracionQR = async () => {
+    setCargandoQr(true);
     try {
-      const limpia = nuevoWhatsappOrg.trim();
-      const res = await apiRequest<OrganizacionData>(`/organizaciones/${orgData.id}`, {
-        method: "PUT",
+      const orgId = getOrganizacionId() || orgData?.id || "default";
+      const res = await apiRequest<any>("/whatsapp/conectar", {
+        method: "POST",
+        body: JSON.stringify({ organizacionId: orgId }),
+      });
+      setWhatsappEstado(res.estado);
+      if (res.qrCode) setQrCodeUrl(res.qrCode);
+      if (res.info) setInfoConexion(res.info);
+    } catch (err) {
+      console.error("Error al solicitar QR de WhatsApp:", err);
+    } finally {
+      setCargandoQr(false);
+    }
+  };
+
+  const handleDesconectarWhatsapp = async () => {
+    if (!confirm("¿Deseas cerrar la sesión de WhatsApp vinculada en el sistema?")) return;
+    setDesconectando(true);
+    try {
+      const orgId = getOrganizacionId() || orgData?.id || "default";
+      await apiRequest<any>("/whatsapp/desconectar", {
+        method: "POST",
+        body: JSON.stringify({ organizacionId: orgId }),
+      });
+      setWhatsappEstado("DESCONECTADO");
+      setQrCodeUrl(null);
+      setInfoConexion(null);
+      cargarDatos();
+    } catch (err) {
+      console.error("Error al desconectar WhatsApp:", err);
+    } finally {
+      setDesconectando(false);
+    }
+  };
+
+  const handleEnviarMensajePrueba = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!telefonoPrueba.trim()) return;
+    setEnviandoPrueba(true);
+    setAlertaPrueba(null);
+    try {
+      const orgId = getOrganizacionId() || orgData?.id || "default";
+      await apiRequest<any>("/whatsapp/enviar-mensaje", {
+        method: "POST",
         body: JSON.stringify({
-          whatsapp: limpia,
-          telefono: limpia,
+          organizacionId: orgId,
+          telefono: telefonoPrueba.trim(),
+          mensaje: `¡Hola! 👋 Este es un mensaje de prueba exitoso emitido de forma 100% automática desde tu sistema CRM conectado a WhatsApp. 🚀`,
         }),
       });
-
-      setOrgData((prev) => (prev ? { ...prev, whatsapp: limpia, telefono: limpia } : prev));
-      setAlertaExitoWhatsapp(true);
-      setTimeout(() => {
-        setAlertaExitoWhatsapp(false);
-        setModalWhatsappOpen(false);
-      }, 1500);
-    } catch (err) {
-      console.error("Error al actualizar WhatsApp de organización:", err);
-      alert("No se pudo guardar el número de WhatsApp.");
+      setAlertaPrueba("¡Mensaje de prueba enviado exitosamente a WhatsApp!");
+      setTimeout(() => setAlertaPrueba(null), 3500);
+    } catch (err: any) {
+      alert(err?.message || "Error al enviar mensaje de prueba.");
     } finally {
-      setGuardandoWhatsapp(false);
+      setEnviandoPrueba(false);
     }
   };
 
   /* =========================================================
-     DISPARAR / ENVIAR CAMPAÑA POR WHATSAPP
+     ENVÍO DE CAMPAÑA: 100% AUTOMÁTICO EN SEGUNDO PLANO
   ========================================================= */
-  const handleEnviarCampana = async () => {
+  const handleEnviarCampanaAutomatica = async () => {
     if (!nombreCampana.trim()) {
       alert("Por favor ingresa un nombre para la campaña.");
       return;
@@ -449,17 +571,60 @@ export default function PromocionesPage() {
         articuloPrecio: articuloSeleccionado?.precioVenta,
       };
 
-      const resultado = await apiRequest<ResultadoEnvio>("/ventas/campanas/enviar", {
+      setProgresoCampana({
+        total: clientesSeleccionadosIds.length,
+        enviados: 0,
+        clienteActual: "Iniciando despacho automático...",
+        finalizada: false,
+      });
+
+      setModalCampanaOpen(false);
+      setModalProgresoOpen(true);
+
+      await apiRequest<any>("/whatsapp/campanas/enviar-masivo", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    } catch (err: any) {
+      console.error("Error al iniciar campaña automática:", err);
+      alert(err?.message || "Ocurrió un error al despachar la campaña de WhatsApp.");
+      setModalProgresoOpen(false);
+    } finally {
+      setEnviandoCampana(false);
+    }
+  };
+
+  /* =========================================================
+     ENVÍO DE CAMPAÑA: MODO MANUAL / FALLBACK (ENLACES)
+  ========================================================= */
+  const handleEnviarCampanaManual = async () => {
+    if (!nombreCampana.trim() || !mensajeCampana.trim() || clientesSeleccionadosIds.length === 0) {
+      alert("Verifica los campos antes de generar la campaña.");
+      return;
+    }
+    setEnviandoCampana(true);
+    try {
+      const orgId = getOrganizacionId() || orgData?.id || "default";
+      const payload = {
+        organizacionId: orgId,
+        nombreCampana: nombreCampana.trim(),
+        mensaje: mensajeCampana.trim(),
+        clientesIds: clientesSeleccionadosIds,
+        articuloNombre: articuloSeleccionado?.nombre,
+        articuloPrecio: articuloSeleccionado?.precioVenta,
+      };
+
+      const resultado = await apiRequest<ResultadoEnvioManual>("/ventas/campanas/enviar", {
         method: "POST",
         body: JSON.stringify(payload),
       });
 
       setModalCampanaOpen(false);
-      setModalResultado(resultado);
-      cargarDatos(); // Refrescar lista de campañas y métricas
+      setModalResultadoManual(resultado);
+      cargarDatos();
     } catch (err) {
-      console.error("Error al enviar campaña:", err);
-      alert("Ocurrió un error al despachar la campaña de WhatsApp.");
+      console.error("Error al preparar campaña manual:", err);
+      alert("Ocurrió un error al generar enlaces de WhatsApp.");
     } finally {
       setEnviandoCampana(false);
     }
@@ -494,8 +659,8 @@ export default function PromocionesPage() {
               </h1>
 
               <p className="mt-1.5 max-w-2xl text-xs sm:text-sm text-[#777777]">
-                Envía promociones, ofertas de productos y recordatorios personalizados directamente
-                al WhatsApp de tus clientes.
+                Envía promociones, ofertas de productos y recordatorios masivos en automático
+                directamente al WhatsApp de tus clientes.
               </p>
             </div>
 
@@ -582,74 +747,113 @@ export default function PromocionesPage() {
           </div>
 
           {/* =========================================================
-              BANNER DE CONEXIÓN WHATSAPP (MATCHING SCREENSHOT)
+              BANNER DE CONEXIÓN WHATSAPP CON ESTADO AUTOMÁTICO
           ========================================================= */}
           <section className="border border-[#E2E2E2] bg-white shadow-2xs">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-7 py-6 gap-4">
               <div className="flex items-center gap-5">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#050505] text-xl font-bold text-white shadow-xs">
-                  <Smartphone size={24} className="text-emerald-400" />
+                <div
+                  className={`flex h-14 w-14 items-center justify-center rounded-full text-xl font-bold shadow-xs transition-colors ${
+                    whatsappEstado === "CONECTADO"
+                      ? "bg-emerald-600 text-white"
+                      : "bg-[#050505] text-white"
+                  }`}
+                >
+                  <Smartphone size={26} className={whatsappEstado === "CONECTADO" ? "text-white" : "text-emerald-400"} />
                 </div>
 
                 <div>
                   <div className="flex items-center gap-3">
                     <h2 className="text-lg font-bold text-black">
-                      WhatsApp
+                      WhatsApp Gateway
                     </h2>
 
-                    {orgData?.whatsapp ? (
-                      <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                        <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                        CONECTADO
+                    {whatsappEstado === "CONECTADO" ? (
+                      <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-300 shadow-2xs">
+                        <span className="h-2 w-2 rounded-full bg-emerald-600 animate-pulse" />
+                        CONECTADO (ENVÍO AUTOMÁTICO ACTIVO)
+                      </span>
+                    ) : whatsappEstado === "GENERANDO_QR" ? (
+                      <span className="flex items-center gap-1.5 text-xs font-bold text-blue-800 bg-blue-50 px-3 py-1 rounded-full border border-blue-300">
+                        <span className="h-2 w-2 rounded-full bg-blue-500 animate-ping" />
+                        ESPERANDO ESCANEO QR
                       </span>
                     ) : (
-                      <span className="flex items-center gap-1.5 text-xs font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-300">
+                      <span className="flex items-center gap-1.5 text-xs font-bold text-amber-900 bg-amber-50 px-3 py-1 rounded-full border border-amber-300">
                         <span className="h-2 w-2 rounded-full bg-amber-500" />
-                        NÚMERO PENDIENTE
+                        NO VINCULADO
                       </span>
                     )}
                   </div>
 
-                  <p className="mt-1 text-sm font-mono font-bold text-[#555555]">
-                    {orgData?.whatsapp || "Sin número registrado aún"}
+                  <p className="mt-1 text-sm font-mono font-bold text-[#444444] flex items-center gap-2">
+                    <span>
+                      {infoConexion?.telefono || orgData?.whatsapp || "Sin dispositivo vinculado"}
+                    </span>
+                    {infoConexion?.nombre && (
+                      <span className="text-xs text-gray-500 font-sans font-normal">
+                        ({infoConexion.nombre})
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setModalWhatsappOpen(true)}
-                className="h-11 border border-black px-5 text-xs font-bold uppercase tracking-wider text-black transition-colors hover:bg-black hover:text-white cursor-pointer shadow-2xs"
-              >
-                Administrar conexión
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleAbrirModalWhatsapp}
+                  className={`h-11 px-5 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-2xs flex items-center gap-2 ${
+                    whatsappEstado === "CONECTADO"
+                      ? "border border-black bg-white text-black hover:bg-black hover:text-white"
+                      : "bg-emerald-600 text-white hover:bg-emerald-700"
+                  }`}
+                >
+                  <QrCode size={16} />
+                  <span>
+                    {whatsappEstado === "CONECTADO"
+                      ? "Administrar Conexión QR"
+                      : "Vincular Celular con Código QR"}
+                  </span>
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 border-t border-[#EEEEEE] sm:grid-cols-3">
               <div className="px-7 py-4">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[#999999]">
-                  Estado
+                  Estado del Motor
                 </p>
-                <p className="mt-1 text-xs font-semibold text-black">
-                  {orgData?.whatsapp ? "Disponible para campañas masivas" : "Configura el número oficial"}
+                <p className="mt-1 text-xs font-semibold text-black flex items-center gap-1.5">
+                  {whatsappEstado === "CONECTADO" ? (
+                    <>
+                      <Zap size={13} className="text-emerald-600 fill-emerald-600" />
+                      <span>Listo para envíos masivos en segundo plano</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle size={13} className="text-amber-600" />
+                      <span>Escanea el QR para enviar en automático</span>
+                    </>
+                  )}
                 </p>
               </div>
 
               <div className="border-[#EEEEEE] px-7 py-4 sm:border-l">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[#999999]">
-                  Última sincronización
+                  Capacidad de Envío
                 </p>
                 <p className="mt-1 text-xs font-semibold text-black">
-                  En tiempo real · {orgData?.nombre || "Mi Empresa"}
+                  Masivo con retardo anti-spam de 2 seg.
                 </p>
               </div>
 
               <div className="border-[#EEEEEE] px-7 py-4 sm:border-l">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[#999999]">
-                  Mensajes disponibles
+                  Organización
                 </p>
                 <p className="mt-1 text-xs font-semibold text-black">
-                  Sin límite configurado
+                  {orgData?.nombre || "Mi Empresa"}
                 </p>
               </div>
             </div>
@@ -820,9 +1024,7 @@ export default function PromocionesPage() {
                       Con número telefónico válido
                     </p>
                   </div>
-                  <span
-                    className="text-sm font-black font-mono text-emerald-600"
-                  >
+                  <span className="text-sm font-black font-mono text-emerald-600">
                     {clientesConWhatsapp.length}
                   </span>
                 </button>
@@ -1021,7 +1223,13 @@ export default function PromocionesPage() {
 
                     {/* Estado y Acciones */}
                     <div className="flex items-center justify-end gap-2 w-full lg:w-auto">
-                      <span className="inline-block px-2.5 py-1 text-[10px] font-extrabold uppercase rounded bg-emerald-100 text-emerald-900 border border-emerald-300">
+                      <span
+                        className={`inline-block px-2.5 py-1 text-[10px] font-extrabold uppercase rounded border ${
+                          c.estado === "EN_PROCESO"
+                            ? "bg-amber-100 text-amber-900 border-amber-300 animate-pulse"
+                            : "bg-emerald-100 text-emerald-900 border-emerald-300"
+                        }`}
+                      >
                         {c.estado || "ENVIADA"}
                       </span>
 
@@ -1064,10 +1272,12 @@ export default function PromocionesPage() {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-black">
-                    Crear y Enviar Campaña de WhatsApp
+                    Crear Campaña de WhatsApp
                   </h3>
                   <p className="text-xs text-[#777777]">
-                    Llega de forma directa y personalizada a tus clientes registrados
+                    {whatsappEstado === "CONECTADO"
+                      ? "Envío 100% automático en segundo plano con tu número de WhatsApp vinculado"
+                      : "Envío con enlaces directos o vincula tu celular por QR para despacho automático"}
                   </p>
                 </div>
               </div>
@@ -1424,21 +1634,38 @@ export default function PromocionesPage() {
                   </div>
                 </div>
 
-                {/* Banner Informativo */}
-                <div className="p-3 bg-white border border-gray-200 rounded text-xs space-y-1">
-                  <p className="font-bold text-black flex items-center gap-1.5">
-                    <CheckCircle2 size={13} className="text-emerald-600" />
-                    <span>WhatsApp Oficial: {orgData?.whatsapp || "Pendiente"}</span>
+                {/* Banner Informativo sobre el Modo de Envío */}
+                <div
+                  className={`p-3.5 border rounded text-xs space-y-1 ${
+                    whatsappEstado === "CONECTADO"
+                      ? "bg-emerald-50 border-emerald-300 text-emerald-950"
+                      : "bg-amber-50 border-amber-300 text-amber-950"
+                  }`}
+                >
+                  <p className="font-bold flex items-center gap-1.5">
+                    {whatsappEstado === "CONECTADO" ? (
+                      <>
+                        <Zap size={14} className="text-emerald-700" />
+                        <span>Envío Automático en Segundo Plano Habilitado</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle size={14} className="text-amber-700" />
+                        <span>Celular no vinculado con QR</span>
+                      </>
+                    )}
                   </p>
-                  <p className="text-[11px] text-gray-500 leading-snug">
-                    El sistema sustituye las variables automáticamente para cada cliente antes del envío.
+                  <p className="text-[11px] opacity-90 leading-snug">
+                    {whatsappEstado === "CONECTADO"
+                      ? `Se enviará automáticamente desde ${infoConexion?.telefono || orgData?.whatsapp || "tu número"} con intervalo inteligente anti-bloqueo.`
+                      : "Puedes vincular tu celular por QR para que el sistema envíe los mensajes automáticamente sin abrir ninguna ventana."}
                   </p>
                 </div>
               </div>
             </div>
 
             {/* Footer con Acciones */}
-            <div className="border-t border-[#EEEEEE] bg-[#FAFAFA] px-6 py-4 flex items-center justify-between">
+            <div className="border-t border-[#EEEEEE] bg-[#FAFAFA] px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => setModalCampanaOpen(false)}
@@ -1447,28 +1674,57 @@ export default function PromocionesPage() {
                 Cancelar
               </button>
 
-              <button
-                type="button"
-                onClick={handleEnviarCampana}
-                disabled={enviandoCampana || clientesSeleccionadosIds.length === 0}
-                className="h-11 px-6 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider transition-all rounded shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {enviandoCampana ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <Send size={15} />
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                {/* Si no está conectado por QR, permitir fallback a enlaces manuales */}
+                {whatsappEstado !== "CONECTADO" && (
+                  <button
+                    type="button"
+                    onClick={handleEnviarCampanaManual}
+                    disabled={enviandoCampana || clientesSeleccionadosIds.length === 0}
+                    className="h-11 px-4 border border-gray-400 hover:border-black bg-white text-black text-xs font-bold uppercase tracking-wider transition-colors rounded cursor-pointer disabled:opacity-50"
+                  >
+                    Generar Enlaces (Manual)
+                  </button>
                 )}
-                <span>
-                  Enviar Campaña a {clientesSeleccionadosIds.length} Clientes
-                </span>
-              </button>
+
+                {/* Botón Principal: Envío Automático */}
+                {whatsappEstado === "CONECTADO" ? (
+                  <button
+                    type="button"
+                    onClick={handleEnviarCampanaAutomatica}
+                    disabled={enviandoCampana || clientesSeleccionadosIds.length === 0}
+                    className="h-11 px-6 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider transition-all rounded shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {enviandoCampana ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Zap size={16} />
+                    )}
+                    <span>
+                      Enviar en Automático a {clientesSeleccionadosIds.length} Clientes
+                    </span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalCampanaOpen(false);
+                      handleAbrirModalWhatsapp();
+                    }}
+                    className="h-11 px-6 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider transition-all rounded shadow-xs flex items-center gap-2 cursor-pointer"
+                  >
+                    <QrCode size={16} />
+                    <span>Vincular WhatsApp por QR para Enviar en Automático</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {/* =========================================================
-          MODAL 2: ADMINISTRAR CONEXIÓN DE WHATSAPP OFICIAL
+          MODAL 2: VINCULACIÓN POR CÓDIGO QR & GESTIÓN WHATSAPP
       ========================================================= */}
       {modalWhatsappOpen && (
         <div
@@ -1477,20 +1733,20 @@ export default function PromocionesPage() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="relative my-auto flex w-full max-w-md flex-col border border-[#DDDDDD] bg-white shadow-2xl cursor-default overflow-hidden animate-in zoom-in-95 duration-150"
+            className="relative my-auto flex w-full max-w-lg flex-col border border-[#DDDDDD] bg-white shadow-2xl cursor-default overflow-hidden animate-in zoom-in-95 duration-150"
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-[#EEEEEE] px-6 py-4 bg-[#FAFAFA]">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center bg-emerald-600 text-white rounded">
-                  <Smartphone size={18} />
+                <div className="flex h-10 w-10 items-center justify-center bg-emerald-600 text-white rounded-lg shadow-2xs">
+                  <QrCode size={20} />
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-black">
-                    Conexión Oficial de WhatsApp
+                    Conectar WhatsApp Oficial por QR
                   </h3>
                   <p className="text-xs text-[#777777]">
-                    Número emisor para campañas y tickets
+                    Permite enviar mensajes automáticos masivos en segundo plano
                   </p>
                 </div>
               </div>
@@ -1503,67 +1759,275 @@ export default function PromocionesPage() {
               </button>
             </div>
 
-            {/* Contenido */}
-            <form onSubmit={handleGuardarWhatsappOrg} className="p-6 space-y-4">
-              {alertaExitoWhatsapp && (
-                <div className="p-3 bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs font-bold rounded flex items-center gap-2">
-                  <CheckCircle2 size={16} className="text-emerald-600" />
-                  <span>¡Número de WhatsApp guardado correctamente!</span>
+            {/* Contenido Dinámico según Estado */}
+            <div className="p-6 space-y-5">
+              {whatsappEstado === "CONECTADO" ? (
+                /* ESTADO 1: YA CONECTADO */
+                <div className="space-y-4">
+                  <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-lg flex items-center gap-3.5">
+                    <div className="h-12 w-12 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                      <CheckCircle2 size={24} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-emerald-950 flex items-center gap-1.5">
+                        <span>WhatsApp Conectado y Activo</span>
+                        <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                      </p>
+                      <p className="text-xs font-mono font-bold text-emerald-800 mt-0.5">
+                        {infoConexion?.telefono || orgData?.whatsapp}
+                      </p>
+                      <p className="text-[11px] text-emerald-700 mt-0.5">
+                        El servidor está listo para despachar campañas y tickets automáticamente.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Formulario de Mensaje de Prueba */}
+                  <form onSubmit={handleEnviarMensajePrueba} className="p-4 border border-gray-200 bg-gray-50 rounded-lg space-y-3">
+                    <p className="text-xs font-bold text-black flex items-center gap-1.5">
+                      <Send size={13} className="text-emerald-700" />
+                      <span>Probar Envío Inmediato de Mensaje</span>
+                    </p>
+
+                    {alertaPrueba && (
+                      <div className="p-2 bg-emerald-100 text-emerald-900 border border-emerald-300 text-[11px] font-bold rounded flex items-center gap-1.5">
+                        <Check size={14} />
+                        <span>{alertaPrueba}</span>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ej. 2491537727 (número a probar)"
+                        value={telefonoPrueba}
+                        onChange={(e) => setTelefonoPrueba(e.target.value)}
+                        className="flex-1 h-10 px-3 bg-white border border-gray-300 text-xs font-mono rounded outline-none focus:border-black"
+                      />
+                      <button
+                        type="submit"
+                        disabled={enviandoPrueba}
+                        className="h-10 px-4 bg-black hover:bg-gray-800 text-white text-xs font-bold uppercase rounded cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                      >
+                        {enviandoPrueba ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                        <span>Probar</span>
+                      </button>
+                    </div>
+                  </form>
+
+                  <div className="pt-2 flex items-center justify-between border-t border-gray-200">
+                    <button
+                      type="button"
+                      onClick={handleDesconectarWhatsapp}
+                      disabled={desconectando}
+                      className="text-xs font-bold text-red-600 hover:text-red-800 hover:underline cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Power size={14} />
+                      <span>{desconectando ? "Desconectando..." : "Desconectar y Cerrar Sesión"}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setModalWhatsappOpen(false)}
+                      className="h-10 px-5 bg-black text-white text-xs font-bold uppercase tracking-wider rounded cursor-pointer"
+                    >
+                      Aceptar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* ESTADO 2: MOSTRAR CÓDIGO QR PARA ESCANEAR */
+                <div className="space-y-4">
+                  <div className="text-center space-y-1">
+                    <h4 className="text-sm font-bold text-black">
+                      Escanea este Código QR desde tu Celular
+                    </h4>
+                    <p className="text-xs text-[#777777]">
+                      Abre WhatsApp en tu teléfono para vincular este sistema como un dispositivo.
+                    </p>
+                  </div>
+
+                  {/* Contenedor del QR */}
+                  <div className="flex flex-col items-center justify-center p-4 bg-[#FAFAFA] border border-gray-200 rounded-xl">
+                    {cargandoQr ? (
+                      <div className="h-64 flex flex-col items-center justify-center gap-3">
+                        <Loader2 size={32} className="animate-spin text-emerald-600" />
+                        <p className="text-xs font-semibold text-gray-600">
+                          Generando código QR seguro...
+                        </p>
+                      </div>
+                    ) : qrCodeUrl ? (
+                      <div className="space-y-3 flex flex-col items-center">
+                        <div className="p-3 bg-white border-2 border-emerald-500 rounded-xl shadow-md">
+                          <img
+                            src={qrCodeUrl}
+                            alt="Código QR WhatsApp"
+                            className="w-64 h-64 object-contain"
+                          />
+                        </div>
+                        <p className="text-[11px] font-semibold text-emerald-700 animate-pulse flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                          <span>Código QR activo · Esperando escaneo...</span>
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="h-64 flex flex-col items-center justify-center gap-3">
+                        <QrCode size={40} className="text-gray-400" />
+                        <button
+                          type="button"
+                          onClick={iniciarGeneracionQR}
+                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded cursor-pointer"
+                        >
+                          Generar Código QR
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Instrucciones Paso a Paso */}
+                  <div className="p-3.5 bg-emerald-50/60 border border-emerald-200 rounded-lg text-xs space-y-1.5 text-emerald-950">
+                    <p className="font-bold flex items-center gap-1.5">
+                      <Smartphone size={14} className="text-emerald-700" />
+                      <span>Instrucciones en tu celular:</span>
+                    </p>
+                    <ol className="list-decimal pl-5 space-y-0.5 text-[11px] text-emerald-900 leading-relaxed font-sans">
+                      <li>Abre <strong>WhatsApp</strong> en tu teléfono.</li>
+                      <li>Toca <strong>Menú (⋮)</strong> en Android o <strong>Ajustes</strong> en iPhone.</li>
+                      <li>Selecciona <strong>Dispositivos vinculados</strong> y toca <strong>Vincular un dispositivo</strong>.</li>
+                      <li>Apunta tu cámara hacia este código QR para conectar.</li>
+                    </ol>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                    <button
+                      type="button"
+                      onClick={iniciarGeneracionQR}
+                      disabled={cargandoQr}
+                      className="text-xs font-bold text-emerald-700 hover:underline cursor-pointer flex items-center gap-1.5"
+                    >
+                      <RefreshCw size={12} className={cargandoQr ? "animate-spin" : ""} />
+                      <span>Regenerar QR</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setModalWhatsappOpen(false)}
+                      className="h-10 px-4 bg-gray-200 text-black text-xs font-bold uppercase rounded cursor-pointer hover:bg-gray-300"
+                    >
+                      Cerrar
+                    </button>
+                  </div>
                 </div>
               )}
-
-              <div>
-                <label className="block text-xs font-bold text-black mb-1">
-                  Número de WhatsApp de la Organización *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej. +52 249 153 7727"
-                  value={nuevoWhatsappOrg}
-                  onChange={(e) => setNuevoWhatsappOrg(e.target.value)}
-                  className="w-full h-11 border border-gray-300 bg-white px-3.5 text-sm font-mono font-bold text-black outline-none focus:border-black rounded"
-                />
-                <p className="text-[11px] text-[#777777] mt-1.5">
-                  Incluye la lada o código de país si es aplicable (ej. +52 para México).
-                </p>
-              </div>
-
-              <div className="p-3.5 bg-gray-50 border border-gray-200 rounded text-xs space-y-1 text-gray-600">
-                <p className="font-bold text-black">¿Cómo funciona?</p>
-                <p>
-                  Tus clientes verán este número como contacto oficial en sus mensajes personalizados y tickets de venta.
-                </p>
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setModalWhatsappOpen(false)}
-                  className="h-10 px-4 text-xs font-bold uppercase text-gray-600 hover:text-black cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={guardandoWhatsapp}
-                  className="h-10 px-5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold uppercase tracking-wider rounded cursor-pointer disabled:opacity-50 flex items-center gap-2"
-                >
-                  {guardandoWhatsapp ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                  <span>Guardar Número</span>
-                </button>
-              </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
 
       {/* =========================================================
-          MODAL 3: RESULTADO DE ENVÍO Y ENLACES DIRECTOS WHATSAPP
+          MODAL 3: BARRA DE PROGRESO DE ENVÍO AUTOMÁTICO EN VIVO
       ========================================================= */}
-      {modalResultado && (
+      {modalProgresoOpen && (
         <div
-          onClick={() => setModalResultado(null)}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs animate-in fade-in duration-150"
+        >
+          <div
+            className="relative my-auto flex w-full max-w-md flex-col border border-emerald-300 bg-white shadow-2xl overflow-hidden rounded-xl animate-in zoom-in-95 duration-150"
+          >
+            {/* Header */}
+            <div className="bg-emerald-700 text-white p-5 text-center space-y-1">
+              <div className="h-12 w-12 rounded-full bg-white/20 mx-auto flex items-center justify-center">
+                {progresoCampana.finalizada ? (
+                  <CheckCircle2 size={26} className="text-white" />
+                ) : (
+                  <Zap size={26} className="text-white animate-bounce" />
+                )}
+              </div>
+              <h3 className="text-base font-bold">
+                {progresoCampana.finalizada
+                  ? "¡Campaña Enviada con Éxito!"
+                  : "Despachando Campaña en Segundo Plano"}
+              </h3>
+              <p className="text-xs text-emerald-100">
+                {progresoCampana.finalizada
+                  ? `Se entregaron los mensajes a todos los destinatarios.`
+                  : "El servidor está enviando los mensajes a WhatsApp uno por uno."}
+              </p>
+            </div>
+
+            {/* Progreso */}
+            <div className="p-6 space-y-4">
+              {/* Barra de Progreso */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <span className="text-gray-700">Progreso de entrega:</span>
+                  <span className="font-mono text-emerald-800">
+                    {progresoCampana.enviados} de {progresoCampana.total} (
+                    {progresoCampana.total > 0
+                      ? Math.round((progresoCampana.enviados / progresoCampana.total) * 100)
+                      : 0}
+                    %)
+                  </span>
+                </div>
+
+                <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-600 transition-all duration-300 rounded-full"
+                    style={{
+                      width: `${
+                        progresoCampana.total > 0
+                          ? Math.round((progresoCampana.enviados / progresoCampana.total) * 100)
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Mensaje de Estado Actual */}
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded text-xs space-y-1 text-center">
+                <p className="font-semibold text-black">
+                  {progresoCampana.finalizada ? (
+                    <span className="text-emerald-700 font-bold">
+                      🎉 Finalizado: {progresoCampana.enviados} mensajes enviados.
+                    </span>
+                  ) : (
+                    <span>
+                      Enviando a: <strong>{progresoCampana.clienteActual || "Procesando..."}</strong>
+                    </span>
+                  )}
+                </p>
+                <p className="text-[11px] text-gray-500">
+                  Protección anti-spam activa: intervalo de seguridad entre mensajes.
+                </p>
+              </div>
+
+              {/* Botón de Finalizar */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalProgresoOpen(false);
+                    cargarDatos();
+                  }}
+                  disabled={!progresoCampana.finalizada}
+                  className="w-full h-11 bg-black hover:bg-gray-800 text-white text-xs font-bold uppercase tracking-wider rounded cursor-pointer disabled:opacity-40 transition-colors"
+                >
+                  {progresoCampana.finalizada ? "Entendido y Cerrar" : "Enviando en segundo plano..."}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          MODAL 4: RESULTADO DE ENVÍO MANUAL (FALLBACK ENLACES)
+      ========================================================= */}
+      {modalResultadoManual && (
+        <div
+          onClick={() => setModalResultadoManual(null)}
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-150 cursor-pointer overflow-y-auto"
         >
           <div
@@ -1578,16 +2042,16 @@ export default function PromocionesPage() {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-emerald-950">
-                    Campaña Lista para Envío
+                    Campaña Lista para Envío Manual
                   </h3>
                   <p className="text-xs text-emerald-800">
-                    Se prepararon {modalResultado.destinatarios.length} mensajes personalizados
+                    Se prepararon {modalResultadoManual.destinatarios.length} enlaces directos
                   </p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setModalResultado(null)}
+                onClick={() => setModalResultadoManual(null)}
                 className="text-gray-400 hover:text-black cursor-pointer"
               >
                 <X size={18} />
@@ -1597,11 +2061,11 @@ export default function PromocionesPage() {
             {/* Contenido con Botones WhatsApp */}
             <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
               <p className="text-xs text-gray-600">
-                Haz clic en <strong>"Abrir Chat"</strong> para abrir el WhatsApp de cada cliente con el mensaje y enlace listos para enviar de inmediato:
+                Haz clic en <strong>"Abrir Chat"</strong> para abrir el WhatsApp de cada cliente con el mensaje precargado:
               </p>
 
               <div className="divide-y divide-gray-100 border border-gray-200 rounded overflow-hidden">
-                {modalResultado.destinatarios.map((dest) => (
+                {modalResultadoManual.destinatarios.map((dest) => (
                   <div
                     key={dest.clienteId}
                     className="p-3 flex items-center justify-between gap-3 hover:bg-gray-50 transition-colors"
@@ -1634,7 +2098,7 @@ export default function PromocionesPage() {
             <div className="border-t border-[#EEEEEE] bg-[#FAFAFA] px-6 py-3.5 flex items-center justify-end">
               <button
                 type="button"
-                onClick={() => setModalResultado(null)}
+                onClick={() => setModalResultadoManual(null)}
                 className="h-10 px-5 bg-black text-white text-xs font-bold uppercase tracking-wider rounded hover:bg-gray-800 transition-colors cursor-pointer"
               >
                 Aceptar y Finalizar
@@ -1645,7 +2109,7 @@ export default function PromocionesPage() {
       )}
 
       {/* =========================================================
-          MODAL 4: DETALLE DE CAMPAÑA HISTÓRICA
+          MODAL 5: DETALLE DE CAMPAÑA HISTÓRICA
       ========================================================= */}
       {modalDetalleCampana && (
         <div
