@@ -1,1371 +1,1296 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import POSHeader from "@/components/pos/POSHeader";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, useCallback } from "react";
 import {
-  BarChart3,
-  CalendarDays,
-  DollarSign,
+  Banknote,
+  Barcode,
+  CreditCard,
+  Minus,
   Package,
+  Plus,
   Search,
   ShoppingCart,
-  TrendingUp,
+  Trash2,
+  UserRound,
   WalletCards,
   X,
-  Send,
-  MessageCircle,
-  Phone,
-  User,
   CheckCircle2,
+  ShieldAlert,
   AlertCircle,
-  Receipt,
-  Sparkles,
-  Smartphone,
-  Share2,
-  RefreshCw,
-  Loader2,
-  Check,
-  Tag,
-  ArrowRight,
-  Filter,
-  Users,
-  Calendar,
-  CreditCard,
-  Banknote,
   Percent,
-  QrCode,
+  Award,
+  UserCheck,
+  UserPlus,
+  Receipt,
+  ArrowRight,
 } from "lucide-react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-
-import Sidebar from "@/components/layout/Sidebar";
-import Header from "@/components/layout/Header";
-import { useSidebar } from "@/context/SidebarContext";
-import { useTheme } from "@/context/ThemeContext";
 import { apiRequest } from "@/services/api";
-import { getOrganizacionId, getUsuarioActual } from "@/services/auth";
-import { getClientes, Cliente } from "@/services/clientes";
+import { getOrganizacionId, getUsuarioActual, hasPosPermiso } from "@/services/auth";
 import { useSocket } from "@/hooks/useSocket";
+import { Cliente, getClientes, createCliente } from "@/services/clientes";
 
-/* =========================================================
-   TIPOS DE DATOS
-========================================================= */
-
-type VentaDetalle = {
-  id: string;
-  articuloId: string;
-  cantidad: number;
-  precioUnitario: number;
-  subtotal: number;
-  articulo?: {
-    id: string;
-    nombre: string;
-    codigo: string;
-    unidad: string;
-  };
+type Product = {
+  id: string | number;
+  code: string;
+  name: string;
+  price: number;
+  family: string;
+  unit?: string;
+  image?: string | null;
+  stock: number;
+  stockMinimo: number;
+  stockIlimitado: boolean;
 };
 
-type VentaItem = {
-  id: string;
-  folio: string;
-  subtotal: number;
-  descuento: number;
-  impuesto: number;
-  total: number;
-  metodoPago: string;
-  estado: string;
-  createdAt: string;
-  clienteId?: string | null;
-  cliente?: {
-    id: string;
-    nombre: string;
-    telefono?: string | null;
-    email?: string | null;
-    puntos?: number;
-    descuento?: number;
-  } | null;
-  usuario?: {
-    id: string;
-    nombre: string;
-  } | null;
-  detalles: VentaDetalle[];
+type CartItem = Product & {
+  quantity: number;
 };
 
-type CampanaItem = {
-  id: string;
-  nombre: string;
-  canal: string;
-  mensaje: string;
-  estado: string;
-  fechaEnvio?: string | null;
-  totalDestinatarios?: number;
-  enviados?: number;
-  createdAt: string;
-};
-
-type DestinatarioResultado = {
-  clienteId: string;
-  nombre: string;
-  telefono: string;
-  telefonoFormato: string;
-  mensajePersonalizado: string;
-  whatsappUrl: string;
-  estado: string;
-};
-
-/* =========================================================
-   PLANTILLAS PREDETERMINADAS DE MENSAJES WHATSAPP
-========================================================= */
-const PLANTILLAS_CAMPANAS = [
+const fallbackProducts: Product[] = [
   {
-    id: "agradecimiento",
-    nombre: "Agradecimiento & Fidelización",
-    titulo: "Agradecimiento por compra",
-    texto:
-      "¡Hola {cliente}! 🌟 Muchas gracias por tu preferencia en {organizacion}. Te confirmamos que tienes {puntos} puntos acumulados. ¡Presenta este mensaje en tu próxima visita para recibir una sorpresa especial!",
+    id: 1,
+    code: "750105530001",
+    name: "Coca-Cola 600 ml",
+    price: 18,
+    family: "Bebidas",
+    stock: 25,
+    stockMinimo: 5,
+    stockIlimitado: false,
   },
   {
-    id: "promocion",
-    nombre: "Promoción Especial / Descuento",
-    titulo: "Promoción de temporada",
-    texto:
-      "¡Hola {cliente}! 🎉 En {organizacion} tenemos una sorpresa para ti: aprovecha hasta un {descuento} de descuento especial en tus artículos favoritos. Contáctanos a nuestro WhatsApp {telefono_org} o visítanos hoy mismo.",
+    id: 2,
+    code: "750105530002",
+    name: "Pepsi 600 ml",
+    price: 17,
+    family: "Bebidas",
+    stock: 15,
+    stockMinimo: 5,
+    stockIlimitado: false,
   },
   {
-    id: "flash",
-    nombre: "Venta Flash Fin de Semana",
-    titulo: "Ventas flash",
-    texto:
-      "¡Hola {cliente}! ⚡ Este fin de semana tenemos grandes promociones en {organizacion}. Responde a este mensaje o visítanos para apartar tus productos antes de que se agoten. ¡Te esperamos!",
+    id: 3,
+    code: "750047800030",
+    name: "Sabritas Original 105 g",
+    price: 15,
+    family: "Botanas",
+    stock: 8,
+    stockMinimo: 10,
+    stockIlimitado: false,
   },
   {
-    id: "puntos",
-    nombre: "Recordatorio de Puntos de Lealtad",
-    titulo: "Puntos disponibles",
-    texto:
-      "¡Hola {cliente}! 🎁 Tienes {puntos} puntos de recompensa listos para canjear en {organizacion}. ¡Ven hoy y utilízalos para obtener descuentos directos en tu compra!",
+    id: 4,
+    code: "750105535531",
+    name: "Agua Ciel 1L",
+    price: 14,
+    family: "Bebidas",
+    stock: 30,
+    stockMinimo: 5,
+    stockIlimitado: false,
+  },
+  {
+    id: 5,
+    code: "ART-005",
+    name: "Galletas Emperador",
+    price: 17,
+    family: "Abarrotes",
+    stock: 0,
+    stockMinimo: 5,
+    stockIlimitado: false,
+  },
+  {
+    id: 6,
+    code: "ART-006",
+    name: "Servicio Express",
+    price: 50,
+    family: "Servicios",
+    stock: 0,
+    stockMinimo: 0,
+    stockIlimitado: true,
   },
 ];
 
 export default function VentasPage() {
-  const { collapsed } = useSidebar();
-  const { activePalette } = useTheme();
-  const primaryColor = activePalette?.hex || "var(--primary)";
-  const { socket } = useSocket();
+  const router = useRouter();
+  const searchRef = useRef<HTMLInputElement>(null);
+  const usuario = typeof window !== "undefined" ? getUsuarioActual() : null;
+  const orgId = typeof window !== "undefined" ? (getOrganizacionId() || usuario?.organizacionId) : null;
+  const room = orgId ? `org_${orgId}` : undefined;
+  const { socket } = useSocket(room);
 
-  // Pestaña activa: analiticas | historial | campanas
-  const [activeTab, setActiveTab] = useState<"analiticas" | "historial" | "campanas">("analiticas");
+  const [products, setProducts] = useState<Product[]>(fallbackProducts);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [selectedFamily, setSelectedFamily] = useState<string>("Todos");
+  const [search, setSearch] = useState("");
+  const [cart, setCart] = useState<CartItem[]>([]);
 
-  // Estado de Datos Reales de Ventas
-  const [ventas, setVentas] = useState<VentaItem[]>([]);
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [campanas, setCampanas] = useState<CampanaItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  // Estados de cliente vinculado
+  const [selectedCustomer, setSelectedCustomer] = useState<Cliente | null>(null);
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [clientesList, setClientesList] = useState<Cliente[]>([]);
+  const [loadingClientes, setLoadingClientes] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [newCustNombre, setNewCustNombre] = useState("");
+  const [newCustTelefono, setNewCustTelefono] = useState("");
+  const [newCustRfc, setNewCustRfc] = useState("");
+  const [newCustDescuento, setNewCustDescuento] = useState(0);
+  const [savingNewCustomer, setSavingNewCustomer] = useState(false);
 
-  // Resumen / KPIs
-  const [kpis, setKpis] = useState({
-    totalIngresos: 0,
-    totalTickets: 0,
-    ticketPromedio: 0,
-    clientesAtendidos: 0,
-  });
+  // Estados de cobro
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"efectivo" | "tarjeta" | "otro">("efectivo");
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [lastSaleResult, setLastSaleResult] = useState<any>(null);
 
-  const [ventasPorDia, setVentasPorDia] = useState<{ fecha: string; total: number; tickets: number }[]>([]);
-  const [metodosPago, setMetodosPago] = useState<{ metodo: string; total: number }[]>([]);
-  const [topArticulos, setTopArticulos] = useState<{ nombre: string; unidades: number; totalVendido: number }[]>([]);
+  // Alerta flotante de stock / límites en POS
+  const [posAlert, setPosAlert] = useState<{ message: string; type: "error" | "warning" | "info" } | null>(null);
 
-  // Datos de Organización (WhatsApp)
-  const [orgData, setOrgData] = useState<{
-    id: string;
-    nombre: string;
-    telefono?: string;
-    whatsapp?: string;
-  } | null>(null);
-
-  const [nuevoWhatsappOrg, setNuevoWhatsappOrg] = useState("");
-  const [guardandoWhatsapp, setGuardandoWhatsapp] = useState(false);
-  const [editandoWhatsapp, setEditandoWhatsapp] = useState(false);
-
-  // Filtros de Historial
-  const [filtroFolio, setFiltroFolio] = useState("");
-  const [filtroMetodo, setFiltroMetodo] = useState("TODOS");
-
-  // Modal Detalle de Venta
-  const [selectedVenta, setSelectedVenta] = useState<VentaItem | null>(null);
-
-  // Estado de Campaña WhatsApp
-  const [nombreCampana, setNombreCampana] = useState("Promoción Especial para Clientes");
-  const [mensajeCampana, setMensajeCampana] = useState(PLANTILLAS_CAMPANAS[0].texto);
-  const [clientesSeleccionadosIds, setClientesSeleccionadosIds] = useState<string[]>([]);
-  const [enviandoCampana, setEnviandoCampana] = useState(false);
-  const [resultadoEnvio, setResultadoEnvio] = useState<{
-    totalClientes: number;
-    destinatarios: DestinatarioResultado[];
-    campana?: any;
-  } | null>(null);
-
-  // Toast
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const showToast = (text: string) => {
-    setToastMessage(text);
-    setTimeout(() => setToastMessage(null), 3500);
+  const showPosAlert = (message: string, type: "error" | "warning" | "info" = "warning") => {
+    setPosAlert({ message, type });
+    setTimeout(() => {
+      setPosAlert(null);
+    }, 4500);
   };
 
-  /* =========================================================
-     CARGA DE DATOS DESDE LA API
-  ========================================================= */
-  const fetchData = async (showLoading = true) => {
-    if (showLoading) setLoading(true);
-    setRefreshing(true);
-
+  const loadOrgProducts = async () => {
     const usuario = getUsuarioActual();
-    const rawOrg = getOrganizacionId();
-    const orgId =
-      rawOrg && rawOrg !== "default" && rawOrg !== "null" && rawOrg !== "undefined"
-        ? rawOrg
-        : usuario?.organizacionId || usuario?.organizacion?.id || "default";
+    const orgId = getOrganizacionId() || usuario?.organizacionId || "default";
 
+    setLoadingProducts(true);
     try {
-      // 1. Cargar Resumen de Ventas
-      const resVentas = await apiRequest<any>(`/ventas/resumen/${orgId}`).catch(() => null);
-      if (resVentas) {
-        setKpis({
-          totalIngresos: resVentas.totalIngresos || 0,
-          totalTickets: resVentas.totalTickets || 0,
-          ticketPromedio: resVentas.ticketPromedio || 0,
-          clientesAtendidos: resVentas.clientesAtendidos || 0,
+      const remoteArts = await apiRequest<any[]>(`/articulos/organizacion/${orgId}`);
+      if (Array.isArray(remoteArts) && remoteArts.length > 0) {
+        const mapped: Product[] = remoteArts.map((a) => {
+          const inv = a.inventarios && a.inventarios.length > 0 ? a.inventarios[0] : null;
+          return {
+            id: a.id,
+            code: a.codigo,
+            name: a.nombre,
+            price: Number(a.precioVenta) || 0,
+            family: a.familia?.nombre || "General",
+            unit: a.unidad || "Pieza",
+            image: a.imagen,
+            stock: a.stock ?? a.totalStock ?? 0,
+            stockMinimo: inv?.stockMinimo ?? 5,
+            stockIlimitado: Boolean(a.stockIlimitado),
+          };
         });
-        if (Array.isArray(resVentas.ventasPorDia)) setVentasPorDia(resVentas.ventasPorDia);
-        if (Array.isArray(resVentas.metodosPago)) setMetodosPago(resVentas.metodosPago);
-        if (Array.isArray(resVentas.topArticulos)) setTopArticulos(resVentas.topArticulos);
-        if (Array.isArray(resVentas.ultimasVentas)) setVentas(resVentas.ultimasVentas);
+        setProducts(mapped);
       }
-
-      // 2. Cargar Clientes
-      const clientsData = await getClientes(orgId).catch(() => []);
-      if (Array.isArray(clientsData)) {
-        setClientes(clientsData);
-        // Preseleccionar clientes con teléfono por defecto para la campaña
-        const conTelefono = clientsData.filter((c) => Boolean(c.telefono)).map((c) => c.id);
-        setClientesSeleccionadosIds(conTelefono);
-      }
-
-      // 3. Cargar Campañas
-      const campanasData = await apiRequest<CampanaItem[]>(`/ventas/campanas/${orgId}`).catch(() => []);
-      if (Array.isArray(campanasData)) {
-        setCampanas(campanasData);
-      }
-
-      // 4. Cargar Info de la Organización para WhatsApp
-      const orgInfo = await apiRequest<any>(`/organizaciones/${orgId}`).catch(() => null);
-      if (orgInfo) {
-        setOrgData({
-          id: orgInfo.id,
-          nombre: orgInfo.nombre,
-          telefono: orgInfo.telefono,
-          whatsapp: orgInfo.whatsapp || orgInfo.telefono,
-        });
-        setNuevoWhatsappOrg(orgInfo.whatsapp || orgInfo.telefono || "");
-      }
-    } catch (err) {
-      console.error("Error al cargar datos de ventas:", err);
+    } catch {
+      // Mantiene fallback si hay error de red
     } finally {
-      if (showLoading) setLoading(false);
-      setRefreshing(false);
+      setLoadingProducts(false);
     }
   };
 
-  useEffect(() => {
-    fetchData();
+  const loadOrgClientes = useCallback(async () => {
+    const usuario = getUsuarioActual();
+    const orgId = getOrganizacionId() || usuario?.organizacionId;
+    if (!orgId) return;
+
+    setLoadingClientes(true);
+    try {
+      const data = await getClientes(orgId);
+      setClientesList(data);
+    } catch (err) {
+      console.error("Error al cargar clientes para POS:", err);
+    } finally {
+      setLoadingClientes(false);
+    }
   }, []);
 
-  // Suscripción Socket.IO en tiempo real para nuevas ventas
+  useEffect(() => {
+    loadOrgProducts();
+    loadOrgClientes();
+  }, [loadOrgClientes]);
+
+  // Sincronización en tiempo real vía Socket.io para el POS
   useEffect(() => {
     if (!socket) return;
 
-    const handleNuevaVenta = () => {
-      fetchData(false);
-      showToast("🔔 Nueva venta procesada en el Punto de Venta");
+    const handleActualizarCatalogo = () => {
+      loadOrgProducts();
     };
 
-    socket.on("venta:creada", handleNuevaVenta);
+    const handleActualizarClientes = () => {
+      loadOrgClientes();
+    };
+
+    const handleStockActualizado = (data: { articuloId: string; nuevoStock: number }) => {
+      setProducts((current) =>
+        current.map((p) =>
+          String(p.id) === String(data.articuloId)
+            ? { ...p, stock: data.nuevoStock }
+            : p
+        )
+      );
+    };
+
+    socket.on("articulo:creado", handleActualizarCatalogo);
+    socket.on("articulo:actualizado", handleActualizarCatalogo);
+    socket.on("articulo:eliminado", handleActualizarCatalogo);
+    socket.on("catalogo:precargado", handleActualizarCatalogo);
+    socket.on("stock:actualizado", handleStockActualizado);
+
+    socket.on("cliente:creado", handleActualizarClientes);
+    socket.on("cliente:actualizado", handleActualizarClientes);
+    socket.on("cliente:eliminado", handleActualizarClientes);
+
     return () => {
-      socket.off("venta:creada", handleNuevaVenta);
+      socket.off("articulo:creado", handleActualizarCatalogo);
+      socket.off("articulo:actualizado", handleActualizarCatalogo);
+      socket.off("articulo:eliminado", handleActualizarCatalogo);
+      socket.off("catalogo:precargado", handleActualizarCatalogo);
+      socket.off("stock:actualizado", handleStockActualizado);
+
+      socket.off("cliente:creado", handleActualizarClientes);
+      socket.off("cliente:actualizado", handleActualizarClientes);
+      socket.off("cliente:eliminado", handleActualizarClientes);
     };
-  }, [socket]);
+  }, [socket, loadOrgClientes]);
 
-  /* =========================================================
-     GUARDAR NÚMERO DE WHATSAPP DE LA ORGANIZACIÓN
-  ========================================================= */
-  const handleGuardarWhatsappOrg = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!orgData?.id) return;
+  const money = (value: number) =>
+    `$${value.toLocaleString("es-MX", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
 
-    setGuardandoWhatsapp(true);
-    try {
-      await apiRequest(`/organizaciones/${orgData.id}`, {
-        method: "PUT",
-        body: JSON.stringify({
-          whatsapp: nuevoWhatsappOrg.trim(),
-        }),
-      });
-
-      setOrgData((prev) => (prev ? { ...prev, whatsapp: nuevoWhatsappOrg.trim() } : null));
-      setEditandoWhatsapp(false);
-      showToast("Número de WhatsApp del negocio actualizado correctamente");
-    } catch (err: any) {
-      alert(err.message || "Error al actualizar WhatsApp de la organización");
-    } finally {
-      setGuardandoWhatsapp(false);
-    }
-  };
-
-  /* =========================================================
-     DISPARO AUTOMÁTICO DE CAMPAÑA WHATSAPP
-  ========================================================= */
-  const handleDispararCampana = async () => {
-    if (clientesSeleccionadosIds.length === 0) {
-      alert("Selecciona al menos un cliente con número de teléfono para enviar la campaña.");
-      return;
-    }
-
-    if (!mensajeCampana.trim()) {
-      alert("El mensaje de la campaña no puede estar vacío.");
-      return;
-    }
-
-    setEnviandoCampana(true);
-    const usuario = getUsuarioActual();
-    const rawOrg = getOrganizacionId();
-    const orgId =
-      rawOrg && rawOrg !== "default" && rawOrg !== "null" && rawOrg !== "undefined"
-        ? rawOrg
-        : usuario?.organizacionId || usuario?.organizacion?.id || "default";
-
-    try {
-      const res = await apiRequest<any>("/ventas/campanas/enviar", {
-        method: "POST",
-        body: JSON.stringify({
-          organizacionId: orgId,
-          nombreCampana: nombreCampana.trim(),
-          mensaje: mensajeCampana.trim(),
-          clientesIds: clientesSeleccionadosIds,
-        }),
-      });
-
-      if (res && res.exito) {
-        setResultadoEnvio(res);
-        showToast(`Campaña preparada para ${res.totalClientes} clientes`);
-        await fetchData(false);
+  const addProduct = (product: Product) => {
+    // Si no es un producto ilimitado, verificar existencias disponibles
+    if (!product.stockIlimitado) {
+      if (product.stock <= 0) {
+        showPosAlert(
+          `⛔ Producto Agotado: No hay existencias de "${product.name}". El sistema no permite vender productos sin stock.`,
+          "error"
+        );
+        return;
       }
-    } catch (err: any) {
-      alert(err.message || "Error al procesar el envío de la campaña.");
-    } finally {
-      setEnviandoCampana(false);
+
+      const existing = cart.find((item) => item.id === product.id);
+      if (existing && existing.quantity >= product.stock) {
+        showPosAlert(
+          `⚠️ Existencias máximas alcanzadas: Solo hay ${product.stock} ${product.unit || "piezas"} disponibles de "${product.name}".`,
+          "warning"
+        );
+        return;
+      }
+    }
+
+    setCart((current) => {
+      const exists = current.find((item) => item.id === product.id);
+
+      if (exists) {
+        return current.map((item) =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      }
+
+      return [...current, { ...product, quantity: 1 }];
+    });
+  };
+
+  const changeQuantity = (id: string | number, delta: number) => {
+    if (delta > 0) {
+      const item = cart.find((i) => i.id === id);
+      const prod = products.find((p) => p.id === id);
+      if (item && prod && !prod.stockIlimitado) {
+        if (item.quantity + delta > prod.stock) {
+          showPosAlert(
+            `⚠️ Existencias máximas alcanzadas: Solo hay ${prod.stock} ${prod.unit || "piezas"} disponibles de "${prod.name}".`,
+            "warning"
+          );
+          return;
+        }
+      }
+    }
+
+    setCart((current) =>
+      current
+        .map((item) => {
+          if (item.id !== id) return item;
+
+          const nextQuantity = item.quantity + delta;
+          return nextQuantity > 0 ? { ...item, quantity: nextQuantity } : null;
+        })
+        .filter(Boolean) as CartItem[]
+    );
+  };
+
+  const removeProduct = (id: string | number) => {
+    setCart((current) => current.filter((item) => item.id !== id));
+  };
+
+  const handleSearchKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (event.key !== "Enter") return;
+    const value = search.trim();
+    if (!value) return;
+
+    const exactProduct = products.find(
+      (product) =>
+        product.code.toLowerCase() === value.toLowerCase() ||
+        product.name.toLowerCase() === value.toLowerCase()
+    );
+
+    if (exactProduct) {
+      addProduct(exactProduct);
+      setSearch("");
     }
   };
 
-  // Enviar ticket individual por WhatsApp
-  const handleEnviarTicketWhatsApp = (venta: VentaItem) => {
-    if (!venta.cliente?.telefono) {
-      alert("Esta venta no tiene un cliente vinculado con número de teléfono.");
+  const families = [
+    "Todos",
+    ...Array.from(new Set(products.map((product) => product.family))),
+  ];
+
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch =
+      product.name.toLowerCase().includes(search.toLowerCase()) ||
+      product.code.toLowerCase().includes(search.toLowerCase());
+
+    const matchesFamily =
+      selectedFamily === "Todos" || product.family === selectedFamily;
+
+    return matchesSearch && matchesFamily;
+  });
+
+  // Cálculo de Subtotales, Descuento de Cliente y Totales
+  const subtotalBruto = cart.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
+
+  const puedeAplicarDescuento =
+    typeof window !== "undefined" ? hasPosPermiso("aplicarDescuentos") : true;
+
+  const clienteDescuentoPorcentaje =
+    selectedCustomer && puedeAplicarDescuento
+      ? Number(selectedCustomer.descuento || 0)
+      : 0;
+
+  const descuentoMonto =
+    clienteDescuentoPorcentaje > 0
+      ? (subtotalBruto * clienteDescuentoPorcentaje) / 100
+      : 0;
+
+  const subtotalNeto = Math.max(0, subtotalBruto - descuentoMonto);
+  const tax = subtotalNeto * 0.16;
+  const total = subtotalNeto + tax;
+
+  const itemCount = cart.reduce(
+    (total, item) => total + item.quantity,
+    0
+  );
+
+  const puntosEstimados = Math.floor(total / 10);
+
+  // Registro de nuevo cliente rápido desde POS
+  const handleCreateQuickCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCustNombre.trim()) return;
+
+    const usuario = getUsuarioActual();
+    const orgId = getOrganizacionId() || usuario?.organizacionId;
+    if (!orgId) return;
+
+    setSavingNewCustomer(true);
+    try {
+      const nuevo = await createCliente({
+        organizacionId: orgId,
+        nombre: newCustNombre.trim(),
+        telefono: newCustTelefono.trim() || undefined,
+        rfc: newCustRfc.trim() || undefined,
+        descuento: Number(newCustDescuento) || 0,
+      });
+
+      setClientesList((prev) => [nuevo, ...prev]);
+      setSelectedCustomer(nuevo);
+      setIsCustomerModalOpen(false);
+      setIsQuickAddOpen(false);
+      setNewCustNombre("");
+      setNewCustTelefono("");
+      setNewCustRfc("");
+      setNewCustDescuento(0);
+    } catch (err) {
+      console.error("Error al registrar cliente rápido:", err);
+      alert("No se pudo registrar el cliente.");
+    } finally {
+      setSavingNewCustomer(false);
+    }
+  };
+
+  // Procesamiento real de la venta hacia el backend
+  const handleProcessPayment = async () => {
+    if (cart.length === 0) return;
+    const usuario = getUsuarioActual();
+    const orgId = getOrganizacionId() || usuario?.organizacionId;
+
+    if (!orgId) {
+      alert("No hay una organización activa vinculada a la sesión.");
       return;
     }
 
-    const orgNombre = orgData?.nombre || "Nuestro Negocio";
-    let rawPhone = venta.cliente.telefono.replace(/\D/g, "");
-    if (rawPhone.length === 10) rawPhone = `52${rawPhone}`;
+    setProcessingPayment(true);
+    try {
+      const payload = {
+        organizacionId: orgId,
+        sucursalId: usuario?.sucursalId || null,
+        clienteId: selectedCustomer ? selectedCustomer.id : null,
+        usuarioId: usuario?.id || null,
+        subtotal: subtotalBruto,
+        descuento: descuentoMonto,
+        impuesto: tax,
+        total,
+        metodoPago:
+          paymentMethod === "efectivo"
+            ? "Efectivo"
+            : paymentMethod === "tarjeta"
+            ? "Tarjeta"
+            : "Otro",
+        detalles: cart.map((item) => ({
+          articuloId: String(item.id),
+          cantidad: item.quantity,
+          precioUnitario: item.price,
+          subtotal: item.price * item.quantity,
+          nombre: item.name,
+        })),
+      };
 
-    const itemsTexto = venta.detalles
-      .map((d) => `• ${d.cantidad}x ${d.articulo?.nombre || "Artículo"} ($${Number(d.subtotal).toFixed(2)})`)
-      .join("\n");
+      const resultado = await apiRequest<any>("/ventas", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
 
-    const mensaje = `Hola *${venta.cliente.nombre}*! 🧾 Gracias por tu compra en *${orgNombre}*.\n\n*Folio:* #${venta.folio}\n*Fecha:* ${new Date(venta.createdAt).toLocaleString("es-MX")}\n*Total:* $${Number(venta.total).toFixed(2)} MXN\n*Método de pago:* ${venta.metodoPago}\n\n*Resumen:* \n${itemsTexto}\n\n${venta.cliente.puntos ? `⭐ *Puntos acumulados:* ${venta.cliente.puntos} pts\n` : ""}¡Esperamos verte pronto de nuevo! 😊`;
-
-    const url = `https://api.whatsapp.com/send?phone=${rawPhone}&text=${encodeURIComponent(mensaje)}`;
-    window.open(url, "_blank");
+      setLastSaleResult(resultado);
+      setPaymentSuccess(true);
+    } catch (err: any) {
+      console.error("Error al procesar la venta:", err);
+      alert(err?.message || "Ocurrió un error al registrar la venta.");
+    } finally {
+      setProcessingPayment(false);
+    }
   };
 
-  /* =========================================================
-     FILTRADO DE HISTORIAL DE VENTAS
-  ========================================================= */
-  const ventasFiltradas = useMemo(() => {
-    return ventas.filter((v) => {
-      const matchFolio =
-        v.folio.toLowerCase().includes(filtroFolio.toLowerCase()) ||
-        (v.cliente?.nombre && v.cliente.nombre.toLowerCase().includes(filtroFolio.toLowerCase()));
+  const handleNuevaVenta = () => {
+    setCart([]);
+    setPaymentSuccess(false);
+    setLastSaleResult(null);
+    setIsPaymentModalOpen(false);
+    // Conservamos o limpiamos el cliente para la siguiente transacción
+    setSelectedCustomer(null);
+  };
 
-      const matchMetodo = filtroMetodo === "TODOS" || v.metodoPago === filtroMetodo;
+  const puedeCancelar =
+    typeof window !== "undefined" ? hasPosPermiso("cancelarVenta") : true;
+  const tieneAcceso =
+    typeof window !== "undefined" ? hasPosPermiso("acceso") : true;
 
-      return matchFolio && matchMetodo;
-    });
-  }, [ventas, filtroFolio, filtroMetodo]);
+  if (!tieneAcceso) {
+    return (
+      <main className="min-h-screen bg-[#F7F7F7] flex flex-col items-center justify-center p-6 text-center">
+        <div className="max-w-md border border-[#D8A814] bg-white p-8 shadow-xl">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-red-600 mb-4">
+            <ShieldAlert size={32} />
+          </div>
+          <h1 className="text-xl font-bold text-black">Acceso No Autorizado</h1>
+          <p className="mt-2 text-sm text-[#666]">
+            Tu perfil de usuario no cuenta con permisos para operar en el Punto de Venta (POS). Contacta a un administrador para habilitar el acceso.
+          </p>
+          <button
+            onClick={() => router.push("/inicio")}
+            className="mt-6 inline-flex h-11 items-center justify-center bg-black px-6 text-sm font-bold text-white hover:bg-[#D8A814] transition-colors"
+          >
+            Volver al CRM
+          </button>
+        </div>
+      </main>
+    );
+  }
 
-  // Vista previa personalizada con el primer cliente seleccionado
-  const previewMensaje = useMemo(() => {
-    const primerCliente = clientes.find((c) => clientesSeleccionadosIds.includes(c.id)) || clientes[0];
-    const clienteNombre = primerCliente?.nombre || "Juan Pérez";
-    const clientePuntos = primerCliente?.puntos || 25;
-    const clienteDesc = primerCliente?.descuento ? `${primerCliente.descuento}%` : "10%";
-    const orgNombre = orgData?.nombre || "Inagerlis Inc";
-    const orgTel = orgData?.whatsapp || "249 153 7727";
-
-    return mensajeCampana
-      .replace(/{cliente}/g, clienteNombre)
-      .replace(/{organizacion}/g, orgNombre)
-      .replace(/{telefono_org}/g, orgTel)
-      .replace(/{puntos}/g, String(clientePuntos))
-      .replace(/{descuento}/g, clienteDesc);
-  }, [mensajeCampana, clientes, clientesSeleccionadosIds, orgData]);
+  // Filtrado de clientes en el modal de selección
+  const filteredModalClientes = clientesList.filter((c) => {
+    const q = customerSearch.toLowerCase();
+    return (
+      c.nombre.toLowerCase().includes(q) ||
+      (c.telefono && c.telefono.includes(q)) ||
+      (c.rfc && c.rfc.toLowerCase().includes(q))
+    );
+  });
 
   return (
-    <main className="min-h-screen bg-[#F7F7F7]">
-      <Sidebar />
+    <main className="min-h-screen bg-[#F7F7F7] text-black">
+      {/* HEADER POS */}
+      <POSHeader
+        activeTab="venta"
+        ticketNumber="#000129"
+        onNuevaVenta={handleNuevaVenta}
+      />
 
-      <div
-        className={`min-h-screen transition-all duration-300 ${
-          collapsed ? "ml-0 md:ml-[80px]" : "ml-0 md:ml-[250px]"
-        }`}
-      >
-        <Header />
+      {/* Alerta Flotante de Stock en POS */}
+      {posAlert && (
+        <div
+          className={`fixed top-4 right-4 z-[9999] flex items-center gap-3 px-5 py-3.5 text-white shadow-2xl animate-in slide-in-from-top-4 duration-200 border-l-4 ${
+            posAlert.type === "error"
+              ? "bg-[#1A1A1A] border-rose-600 text-white"
+              : "bg-[#1A1A1A] border-amber-500 text-white"
+          }`}
+        >
+          {posAlert.type === "error" ? (
+            <ShieldAlert size={18} className="text-rose-500 flex-none" />
+          ) : (
+            <AlertCircle size={18} className="text-amber-400 flex-none" />
+          )}
+          <span className="text-xs font-bold leading-snug">{posAlert.message}</span>
+          <button
+            onClick={() => setPosAlert(null)}
+            className="ml-2 text-gray-400 hover:text-white cursor-pointer"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
-        {/* Notificación Toast */}
-        {toastMessage && (
-          <div className="fixed top-6 right-6 z-[10000] flex items-center gap-3 bg-black px-5 py-3.5 text-white shadow-2xl animate-in slide-in-from-top-5 duration-200 border-l-4 border-black">
-            <CheckCircle2 size={16} className="text-white flex-none" />
-            <span className="text-xs font-bold">{toastMessage}</span>
-          </div>
-        )}
+      {/* CONTENIDO PRINCIPAL */}
+      <div className="grid h-[calc(100vh-136px)] grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_370px] overflow-hidden">
+        {/* SECCIÓN CATÁLOGO DE PRODUCTOS */}
+        <section className="flex flex-col min-w-0 border-r border-[#E2E2E2] bg-[#F9FAFB] p-6 overflow-hidden">
+          {/* Barra de Búsqueda y Código de Barras */}
+          <div className="flex-none">
+            <div className="flex gap-3">
+              <div className="flex h-12 flex-1 items-center rounded-xl border border-[#E5E7EB] bg-white px-4 shadow-sm focus-within:border-black focus-within:ring-1 focus-within:ring-black">
+                <Barcode size={22} className="mr-3 text-[#9CA3AF] flex-none" />
 
-        <div className="p-4 sm:p-6 lg:p-10 space-y-6">
-          {/* Header de la Vista */}
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between border-b border-[#E5E5E5] pb-6">
-            <div>
-              <p
-                className="text-xs font-bold uppercase tracking-[0.18em]"
-                style={{ color: primaryColor }}
-              >
-                Ventas & Marketing
-              </p>
-              <h1 className="mt-1 text-2xl sm:text-3xl font-bold text-black flex items-center gap-2">
-                <span>Ventas y Campañas WhatsApp</span>
-              </h1>
-              <p className="mt-1 text-xs sm:text-sm text-[#777777]">
-                Monitorea tus ingresos en vivo y envía campañas automáticas personalizadas por WhatsApp a tus clientes.
-              </p>
-            </div>
+                <input
+                  ref={searchRef}
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  onKeyDown={handleSearchKeyDown}
+                  placeholder="Escanea código de barras o busca un producto..."
+                  className="h-full min-w-0 flex-1 bg-transparent text-sm text-black outline-none placeholder:text-[#9CA3AF]"
+                />
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => fetchData(true)}
-                disabled={refreshing}
-                className="inline-flex items-center gap-2 h-10 border border-[#DDDDDD] bg-white px-4 text-xs font-bold uppercase tracking-wider text-black hover:border-black transition-colors cursor-pointer shadow-2xs"
-              >
-                <RefreshCw size={13} className={refreshing ? "animate-spin" : ""} />
-                <span>Actualizar</span>
+                <span className="ml-2 rounded bg-[#F3F4F6] px-2 py-0.5 text-[10px] font-bold text-[#6B7280]">
+                  ENTER
+                </span>
+              </div>
+
+              <button className="flex h-12 w-12 flex-none items-center justify-center rounded-xl border border-[#E5E7EB] bg-white text-[#4B5563] shadow-sm hover:border-black hover:text-black">
+                <Search size={19} />
               </button>
             </div>
           </div>
 
-          {/* PESTAÑAS PRINCIPALES */}
-          <div className="flex items-center gap-2 border-b border-[#E5E5E5] overflow-x-auto">
-            <button
-              type="button"
-              onClick={() => setActiveTab("analiticas")}
-              className={`h-11 px-5 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 border-b-2 cursor-pointer ${
-                activeTab === "analiticas"
-                  ? "border-black text-black bg-white shadow-2xs font-extrabold"
-                  : "border-transparent text-[#777777] hover:text-black hover:bg-gray-100"
-              }`}
-            >
-              <BarChart3 size={15} />
-              <span>Tablero & Analíticas</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("historial")}
-              className={`h-11 px-5 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 border-b-2 cursor-pointer ${
-                activeTab === "historial"
-                  ? "border-black text-black bg-white shadow-2xs font-extrabold"
-                  : "border-transparent text-[#777777] hover:text-black hover:bg-gray-100"
-              }`}
-            >
-              <Receipt size={15} />
-              <span>Historial de Ventas ({ventas.length})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("campanas")}
-              className={`h-11 px-5 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 border-b-2 cursor-pointer ${
-                activeTab === "campanas"
-                  ? "border-emerald-600 text-emerald-800 bg-emerald-50/50 shadow-2xs font-extrabold"
-                  : "border-transparent text-[#777777] hover:text-black hover:bg-gray-100"
-              }`}
-            >
-              <MessageCircle size={15} className="text-emerald-600" />
-              <span>Campañas WhatsApp Automáticas</span>
-              <span className="ml-1 px-1.5 py-0.2 rounded text-[10px] bg-emerald-600 text-white font-bold">
-                {clientes.filter((c) => Boolean(c.telefono)).length} clientes
-              </span>
-            </button>
+          {/* Filtros de Familias */}
+          <div className="mt-4 flex-none flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:bg-[#D1D5DB]">
+            {families.map((family) => (
+              <button
+                key={family}
+                onClick={() => setSelectedFamily(family)}
+                className={`
+                  h-9 whitespace-nowrap rounded-lg px-4 text-xs font-bold transition-all
+                  ${
+                    selectedFamily === family
+                      ? "bg-black text-white shadow-sm"
+                      : "border border-[#E5E7EB] bg-white text-[#4B5563] hover:border-[#9CA3AF] hover:text-black"
+                  }
+                `}
+              >
+                {family}
+              </button>
+            ))}
           </div>
 
-          {/* ========================================================
-              PESTAÑA 1: TABLERO & ANALÍTICAS EN VIVO
-          ======================================================== */}
-          {activeTab === "analiticas" && (
-            <div className="space-y-6">
-              {/* Tarjetas KPI Superiores */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="border border-[#E5E5E5] bg-white p-5 shadow-2xs">
-                  <div className="flex items-center justify-between text-[#888888] mb-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider">Ingresos Totales</span>
-                    <DollarSign size={18} className="text-black" />
-                  </div>
-                  <p className="text-2xl font-black text-black font-mono">
-                    ${kpis.totalIngresos.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                  <p className="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
-                    <TrendingUp size={12} />
-                    <span>Ventas reales consolidadas</span>
-                  </p>
-                </div>
+          {/* Encabezado del Catálogo */}
+          <div className="mb-3 mt-4 flex-none flex items-center justify-between">
+            <h1 className="text-base font-bold text-black">
+              Productos ({filteredProducts.length})
+            </h1>
+            <span className="text-xs text-[#6B7280]">Selecciona para agregar a la orden</span>
+          </div>
 
-                <div className="border border-[#E5E5E5] bg-white p-5 shadow-2xs">
-                  <div className="flex items-center justify-between text-[#888888] mb-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider">Tickets Emitidos</span>
-                    <ShoppingCart size={18} className="text-black" />
-                  </div>
-                  <p className="text-2xl font-black text-black font-mono">
-                    {kpis.totalTickets.toLocaleString()}
-                  </p>
-                  <p className="text-[11px] text-[#777777] font-semibold mt-1">
-                    Órdenes completadas en POS
-                  </p>
-                </div>
+          {/* Grid de Productos Adaptativo */}
+          <div className="flex-1 overflow-y-auto pr-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-[#D1D5DB]">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 pb-4">
+              {filteredProducts.map((product) => {
+                const isOutOfStock = !product.stockIlimitado && product.stock <= 0;
+                const isLowStock = !product.stockIlimitado && product.stock > 0 && product.stock <= product.stockMinimo;
 
-                <div className="border border-[#E5E5E5] bg-white p-5 shadow-2xs">
-                  <div className="flex items-center justify-between text-[#888888] mb-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider">Ticket Promedio</span>
-                    <WalletCards size={18} className="text-black" />
-                  </div>
-                  <p className="text-2xl font-black text-black font-mono">
-                    ${kpis.ticketPromedio.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                  <p className="text-[11px] text-[#777777] font-semibold mt-1">
-                    Gasto promedio por cliente
-                  </p>
-                </div>
+                return (
+                  <button
+                    key={product.id}
+                    onClick={() => addProduct(product)}
+                    className={`group relative flex flex-col justify-between rounded-xl border p-3.5 text-left shadow-xs transition-all ${
+                      isOutOfStock
+                        ? "border-red-200 bg-red-50/20 opacity-75 hover:border-red-400 cursor-not-allowed"
+                        : "border-[#E5E7EB] bg-white hover:border-[var(--primary)] hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
+                    }`}
+                  >
+                    {/* Header de Tarjeta / Imagen y Badges */}
+                    <div className="flex items-start justify-between gap-1">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--primary-light)] text-[var(--primary)] group-hover:scale-105 transition-transform overflow-hidden border border-[#EEEEEE]">
+                        {product.image ? (
+                          <img
+                            src={product.image}
+                            alt={product.name}
+                            className="h-full w-full object-contain p-0.5"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          <Package size={18} />
+                        )}
+                      </div>
 
-                <div className="border border-[#E5E5E5] bg-white p-5 shadow-2xs">
-                  <div className="flex items-center justify-between text-[#888888] mb-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider">Clientes Atendidos</span>
-                    <Users size={18} className="text-black" />
-                  </div>
-                  <p className="text-2xl font-black text-black font-mono">
-                    {kpis.clientesAtendidos.toLocaleString()}
-                  </p>
-                  <p className="text-[11px] text-emerald-600 font-semibold mt-1">
-                    {clientes.length} registrados en catálogo
-                  </p>
-                </div>
-              </div>
-
-              {/* Gráficos de Ventas */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Gráfica 1: Ventas por Día */}
-                <div className="lg:col-span-2 border border-[#E5E5E5] bg-white p-6 shadow-2xs">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="text-base font-bold text-black">Ventas de los Últimos 7 Días</h3>
-                      <p className="text-xs text-[#777777]">Comportamiento de facturación diaria</p>
-                    </div>
-                  </div>
-
-                  <div className="h-[280px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={ventasPorDia}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EEEEEE" />
-                        <XAxis dataKey="fecha" tick={{ fontSize: 11, fill: "#666666" }} />
-                        <YAxis tick={{ fontSize: 11, fill: "#666666" }} allowDecimals={false} />
-                        <Tooltip
-                          content={({ active, payload }) => {
-                            if (active && payload && payload.length) {
-                              const data = payload[0].payload;
-                              return (
-                                <div className="bg-black text-white p-3 text-xs shadow-xl border border-gray-800">
-                                  <p className="font-bold">{data.fecha}</p>
-                                  <p className="mt-1 text-gray-300">
-                                    Total: <span className="font-bold text-white">${Number(data.total).toFixed(2)}</span>
-                                  </p>
-                                  <p className="text-gray-300">
-                                    Tickets: <span className="font-bold text-white">{data.tickets}</span>
-                                  </p>
-                                </div>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
-                        <Bar dataKey="total" fill={primaryColor} radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                {/* Gráfica 2: Métodos de Pago */}
-                <div className="border border-[#E5E5E5] bg-white p-6 shadow-2xs flex flex-col justify-between">
-                  <div>
-                    <h3 className="text-base font-bold text-black mb-1">Métodos de Pago</h3>
-                    <p className="text-xs text-[#777777] mb-4">Distribución de ingresos por canal de cobro</p>
-
-                    <div className="space-y-3">
-                      {metodosPago.length === 0 ? (
-                        <div className="py-12 text-center text-xs text-[#888888] bg-[#FAFAFA] border border-dashed border-[#DDDDDD]">
-                          Sin registros de cobro aún
-                        </div>
+                      {product.stockIlimitado ? (
+                        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[9px] font-extrabold bg-purple-50 text-purple-700 border border-purple-200">
+                          ♾️ Ilimitado
+                        </span>
+                      ) : isOutOfStock ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-extrabold bg-red-100 text-red-700 border border-red-300">
+                          AGOTADO
+                        </span>
+                      ) : isLowStock ? (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300">
+                          ⚠️ {product.stock} disp.
+                        </span>
                       ) : (
-                        metodosPago.map((m) => {
-                          const porcentaje =
-                            kpis.totalIngresos > 0 ? Math.round((m.total / kpis.totalIngresos) * 100) : 0;
-                          return (
-                            <div key={m.metodo} className="space-y-1">
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="font-bold text-black flex items-center gap-1.5">
-                                  {m.metodo === "Efectivo" ? (
-                                    <Banknote size={14} className="text-emerald-600" />
-                                  ) : (
-                                    <CreditCard size={14} className="text-blue-600" />
-                                  )}
-                                  {m.metodo}
-                                </span>
-                                <span className="font-mono text-[11px] font-bold text-black">
-                                  ${m.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })} ({porcentaje}%)
-                                </span>
-                              </div>
-                              <div className="w-full bg-[#EEEEEE] h-2 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full bg-black transition-all"
-                                  style={{ width: `${Math.max(5, porcentaje)}%` }}
-                                />
-                              </div>
-                            </div>
-                          );
-                        })
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold text-gray-500 bg-gray-100">
+                          {product.stock} disp.
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-2.5">
+                      <p className="line-clamp-2 text-xs font-bold text-[#111827] leading-tight">
+                        {product.name}
+                      </p>
+                      <div className="mt-1 flex items-center justify-between text-[10px]">
+                        <span className="font-medium text-[#9CA3AF] truncate">
+                          {product.family}
+                        </span>
+                        {isLowStock && (
+                          <span className="font-bold text-amber-700 text-[9px]">
+                            ¡Stock bajo!
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-2.5 border-t border-[#F3F4F6] pt-2 flex items-center justify-between">
+                      <span className="text-[10px] text-[#6B7280] font-mono">
+                        {product.code}
+                      </span>
+                      <span className="text-sm font-bold text-[var(--primary)] font-mono">
+                        {money(product.price)}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* SECCIÓN ORDEN ACTUAL Y VINCULACIÓN DE CLIENTE */}
+        <aside className="flex min-w-0 h-full overflow-hidden flex-col bg-white border-l border-[#E5E7EB]">
+          {/* Header de la Orden */}
+          <div className="border-b border-[#EEEEEE] px-5 py-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-[#111827]">Orden Actual</h2>
+              <p className="mt-0.5 text-xs text-[#6B7280]">
+                {cart.length === 0
+                  ? "Sin artículos agregados"
+                  : `${itemCount} ${itemCount === 1 ? "artículo" : "artículos"} en la orden`}
+              </p>
+            </div>
+
+            {cart.length > 0 && puedeCancelar && (
+              <button
+                onClick={() => setCart([])}
+                className="flex items-center gap-1.5 text-xs font-semibold text-[#EF4444] hover:underline"
+              >
+                <Trash2 size={14} />
+                Vaciar
+              </button>
+            )}
+          </div>
+
+          {/* WIDGET DE CLIENTE VINCULADO A LA VENTA */}
+          <div className="border-b border-[#E5E7EB] bg-[#F9FAFB] px-5 py-3 transition-all">
+            {selectedCustomer ? (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-black text-xs font-bold text-white shadow-xs">
+                    {selectedCustomer.nombre.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="truncate text-xs font-bold text-black">
+                        {selectedCustomer.nombre}
+                      </p>
+                      <UserCheck size={13} className="text-emerald-600 flex-none" />
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="inline-flex items-center gap-0.5 text-[10px] text-[#B45309] bg-[#FFFBEB] px-1.5 py-0.2 rounded font-bold border border-[#FDE68A]">
+                        <Award size={10} />
+                        {selectedCustomer.puntos || 0} pts
+                      </span>
+                      {selectedCustomer.descuento > 0 && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded font-bold border border-emerald-200">
+                          <Percent size={9} />
+                          {selectedCustomer.descuento}% desc.
+                        </span>
                       )}
                     </div>
                   </div>
-
-                  <div className="mt-6 pt-4 border-t border-[#EEEEEE] bg-[#FAFAFA] p-3 text-center">
-                    <p className="text-[11px] text-[#666666]">
-                      Punto de Venta activo con sincronización de inventario en tiempo real.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Ranking de Artículos Más Vendidos */}
-              <div className="border border-[#E5E5E5] bg-white p-6 shadow-2xs">
-                <h3 className="text-base font-bold text-black mb-1">Top Artículos Más Vendidos</h3>
-                <p className="text-xs text-[#777777] mb-4">Productos con mayor rotación e impacto en facturación</p>
-
-                {topArticulos.length === 0 ? (
-                  <div className="py-10 text-center text-xs text-[#888888] bg-[#FAFAFA] border border-dashed border-[#DDDDDD]">
-                    <Package size={28} className="mx-auto text-gray-400 mb-2" />
-                    <p className="font-bold text-black">Sin datos suficientes de artículos vendidos</p>
-                    <p className="text-[11px] text-[#777777]">Registra ventas desde el Punto de Venta para generar este reporte.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {topArticulos.map((art, idx) => (
-                      <div key={art.nombre} className="border border-[#EEEEEE] bg-[#FAFAFA] p-3 flex flex-col justify-between">
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <span className="flex h-6 w-6 items-center justify-center bg-black text-white text-[11px] font-extrabold rounded">
-                            #{idx + 1}
-                          </span>
-                          <span className="text-right font-mono text-xs font-black text-emerald-700">
-                            ${art.totalVendido.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-black line-clamp-1" title={art.nombre}>
-                            {art.nombre}
-                          </p>
-                          <p className="text-[11px] font-mono text-[#777777] mt-0.5">
-                            {art.unidades.toLocaleString()} unidades vendidas
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================
-              PESTAÑA 2: HISTORIAL DE VENTAS & TICKETS
-          ======================================================== */}
-          {activeTab === "historial" && (
-            <div className="space-y-4">
-              {/* Barra de Búsqueda y Filtro */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-white p-4 border border-[#DDDDDD] shadow-2xs">
-                <div className="relative flex-1">
-                  <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#999999]" />
-                  <input
-                    type="text"
-                    placeholder="Buscar por folio de ticket o nombre de cliente..."
-                    value={filtroFolio}
-                    onChange={(e) => setFiltroFolio(e.target.value)}
-                    className="w-full bg-[#FAFAFA] border border-[#EEEEEE] pl-10 pr-4 py-2.5 text-xs text-black outline-none focus:border-black focus:bg-white transition-colors"
-                  />
                 </div>
 
-                <select
-                  value={filtroMetodo}
-                  onChange={(e) => setFiltroMetodo(e.target.value)}
-                  className="h-10 border border-[#EEEEEE] bg-[#FAFAFA] px-3 text-xs font-bold text-black outline-none focus:border-black cursor-pointer"
-                >
-                  <option value="TODOS">Todos los Métodos de Pago</option>
-                  <option value="Efectivo">Efectivo</option>
-                  <option value="Tarjeta">Tarjeta</option>
-                  <option value="Transferencia">Transferencia</option>
-                </select>
-
-                <div className="text-xs font-bold text-[#777777] hidden md:block whitespace-nowrap">
-                  Mostrando: {ventasFiltradas.length} de {ventas.length}
+                <div className="flex items-center gap-2 flex-none">
+                  <button
+                    onClick={() => setIsCustomerModalOpen(true)}
+                    className="text-[11px] font-bold text-[#D8A814] hover:text-black transition-colors"
+                  >
+                    Cambiar
+                  </button>
+                  <button
+                    onClick={() => setSelectedCustomer(null)}
+                    title="Desvincular cliente"
+                    className="text-[#999999] hover:text-[#EF4444] p-1"
+                  >
+                    <X size={14} />
+                  </button>
                 </div>
               </div>
-
-              {/* Tabla de Ventas */}
-              <div className="border border-[#DDDDDD] bg-white shadow-2xs overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-[#E0E0E0] bg-[#FAFAFA]">
-                      <th className="py-3 px-4 font-bold uppercase tracking-wider text-[#777777]">Folio</th>
-                      <th className="py-3 px-4 font-bold uppercase tracking-wider text-[#777777]">Fecha y Hora</th>
-                      <th className="py-3 px-4 font-bold uppercase tracking-wider text-[#777777]">Cliente Vinculado</th>
-                      <th className="py-3 px-4 font-bold uppercase tracking-wider text-[#777777] text-center">Artículos</th>
-                      <th className="py-3 px-4 font-bold uppercase tracking-wider text-[#777777] text-center">Método</th>
-                      <th className="py-3 px-4 font-bold uppercase tracking-wider text-[#777777] text-right">Total</th>
-                      <th className="py-3 px-4 font-bold uppercase tracking-wider text-[#777777] text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#EEEEEE]">
-                    {loading ? (
-                      <tr>
-                        <td colSpan={7} className="py-16 text-center">
-                          <Loader2 size={28} className="animate-spin text-black mx-auto mb-2" />
-                          <p className="text-xs text-[#777777]">Cargando historial de ventas...</p>
-                        </td>
-                      </tr>
-                    ) : ventasFiltradas.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="py-16 text-center">
-                          <Receipt size={36} className="text-[#CCCCCC] mx-auto mb-2" />
-                          <p className="text-sm font-bold text-black">No se encontraron ventas</p>
-                          <p className="text-xs text-[#777777] mt-1">Realiza tu primera venta en la terminal de Punto de Venta.</p>
-                        </td>
-                      </tr>
-                    ) : (
-                      ventasFiltradas.map((v) => {
-                        const totalArticulos = v.detalles.reduce((acc, d) => acc + d.cantidad, 0);
-                        const fechaFormateada = new Date(v.createdAt).toLocaleString("es-MX", {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        });
-
-                        return (
-                          <tr key={v.id} className="hover:bg-[#FAFAFA] transition-colors">
-                            {/* Folio */}
-                            <td className="py-3.5 px-4 font-mono font-black text-black">
-                              #{v.folio}
-                            </td>
-
-                            {/* Fecha */}
-                            <td className="py-3.5 px-4 text-[#666666] font-mono text-[11px]">
-                              {fechaFormateada}
-                            </td>
-
-                            {/* Cliente */}
-                            <td className="py-3.5 px-4">
-                              {v.cliente ? (
-                                <div className="space-y-0.5">
-                                  <p className="font-bold text-black flex items-center gap-1.5">
-                                    <User size={12} className="text-gray-500" />
-                                    <span>{v.cliente.nombre}</span>
-                                  </p>
-                                  {v.cliente.telefono && (
-                                    <p className="text-[10px] font-mono text-emerald-700 flex items-center gap-1">
-                                      <Phone size={10} />
-                                      <span>{v.cliente.telefono}</span>
-                                    </p>
-                                  )}
-                                </div>
-                              ) : (
-                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-500">
-                                  Público General
-                                </span>
-                              )}
-                            </td>
-
-                            {/* Cantidad de Artículos */}
-                            <td className="py-3.5 px-4 text-center font-mono font-bold text-black">
-                              {totalArticulos} unid.
-                            </td>
-
-                            {/* Método de Pago */}
-                            <td className="py-3.5 px-4 text-center">
-                              <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-[#F0F0F0] text-black">
-                                {v.metodoPago}
-                              </span>
-                            </td>
-
-                            {/* Total */}
-                            <td className="py-3.5 px-4 text-right font-mono text-sm font-extrabold text-black">
-                              ${Number(v.total).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </td>
-
-                            {/* Acciones */}
-                            <td className="py-3.5 px-4 text-right space-x-1.5">
-                              {/* Botón WhatsApp si tiene teléfono */}
-                              {v.cliente?.telefono && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleEnviarTicketWhatsApp(v)}
-                                  title="Enviar ticket y agradecimiento por WhatsApp"
-                                  className="inline-flex items-center gap-1 h-8 bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 text-[11px] font-bold rounded transition-colors cursor-pointer"
-                                >
-                                  <MessageCircle size={13} />
-                                  <span className="hidden sm:inline">WhatsApp</span>
-                                </button>
-                              )}
-
-                              {/* Ver Detalle del Ticket */}
-                              <button
-                                type="button"
-                                onClick={() => setSelectedVenta(v)}
-                                className="inline-flex items-center gap-1 h-8 bg-black hover:bg-[var(--primary)] text-white px-3 text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                              >
-                                <span>Ver Ticket</span>
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================
-              PESTAÑA 3: CAMPAÑAS WHATSAPP AUTOMÁTICAS
-          ======================================================== */}
-          {activeTab === "campanas" && (
-            <div className="space-y-6">
-              {/* BANNER 1: NÚMERO DE WHATSAPP OFICIAL DE LA ORGANIZACIÓN */}
-              <div className="border border-emerald-300 bg-emerald-50/60 p-5 shadow-2xs">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-3.5">
-                    <div className="flex h-12 w-12 items-center justify-center bg-emerald-600 text-white rounded-xl shadow-xs">
-                      <Smartphone size={24} />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-base font-bold text-emerald-950">
-                          Número de WhatsApp Oficial de la Organización
-                        </h3>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-200 text-emerald-900 border border-emerald-300">
-                          CONECTADO
-                        </span>
-                      </div>
-                      <p className="text-xs text-emerald-800 mt-0.5">
-                        Este número identifica a tu negocio al enviar campañas y tickets automáticos a tus clientes.
-                      </p>
-                    </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs text-[#6B7280]">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#E5E7EB] text-[#4B5563]">
+                    <UserRound size={14} />
                   </div>
-
-                  {!editandoWhatsapp ? (
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono text-base font-extrabold text-emerald-950 bg-white px-3 py-1.5 border border-emerald-300 rounded shadow-2xs">
-                        {orgData?.whatsapp || "No configurado"}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setEditandoWhatsapp(true)}
-                        className="h-9 bg-black hover:bg-emerald-800 text-white text-xs font-bold uppercase tracking-wider px-3.5 rounded transition-colors cursor-pointer"
-                      >
-                        Cambiar Número
-                      </button>
-                      <a
-                        href="/promociones"
-                        className="h-9 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold uppercase tracking-wider px-3.5 rounded transition-colors flex items-center gap-1.5 shadow-2xs"
-                      >
-                        <QrCode size={14} />
-                        <span>Vincular Celular por QR</span>
-                      </a>
-                    </div>
-                  ) : (
-                    <form onSubmit={handleGuardarWhatsappOrg} className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        required
-                        placeholder="Ej. +52 249 153 7727"
-                        value={nuevoWhatsappOrg}
-                        onChange={(e) => setNuevoWhatsappOrg(e.target.value)}
-                        className="h-10 bg-white border border-emerald-500 px-3 text-xs font-mono font-bold text-black outline-none focus:ring-1 focus:ring-emerald-600 rounded"
-                      />
-                      <button
-                        type="submit"
-                        disabled={guardandoWhatsapp}
-                        className="h-10 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 rounded cursor-pointer disabled:opacity-50"
-                      >
-                        {guardandoWhatsapp ? <Loader2 size={14} className="animate-spin" /> : "Guardar"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditandoWhatsapp(false)}
-                        className="h-10 bg-gray-200 text-black text-xs font-bold px-2.5 rounded cursor-pointer"
-                      >
-                        Cancelar
-                      </button>
-                    </form>
-                  )}
-                </div>
-              </div>
-
-              {/* CUADRÍCULA: CREADOR DE CAMPAÑA + VISTA PREVIA INTERACTIVA */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                {/* LADO IZQUIERDO: FORMULARIO DE CAMPAÑA */}
-                <div className="lg:col-span-7 border border-[#E5E5E5] bg-white p-6 shadow-2xs space-y-5">
-                  <div className="flex items-center justify-between border-b border-[#EEEEEE] pb-3">
-                    <h3 className="text-base font-bold text-black flex items-center gap-2">
-                      <Sparkles size={18} className="text-emerald-600" />
-                      <span>Crear Nueva Campaña de Ventas</span>
-                    </h3>
-                    <span className="text-xs text-[#777777]">Envío masivo con variables dinámicas</span>
-                  </div>
-
-                  {/* Selector de Plantillas Rápidas */}
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-[#555555] mb-2">
-                      Plantillas Rápidas de Campaña
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {PLANTILLAS_CAMPANAS.map((p) => (
+                    <span className="font-semibold text-black block text-xs">Público General</span>
+                    <span className="text-[10px] text-[#888888]">Sin descuentos ni puntos</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setIsCustomerModalOpen(true)}
+                  className="inline-flex items-center gap-1 rounded-lg border border-[#D8A814] bg-white px-2.5 py-1 text-xs font-bold text-[#D8A814] shadow-2xs hover:bg-[#D8A814] hover:text-white transition-all"
+                >
+                  <UserPlus size={12} />
+                  Vincular cliente
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Lista de Productos del Carrito */}
+          <div className="flex-1 overflow-y-auto px-5 py-3 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-[#D1D5DB]">
+            {cart.length === 0 ? (
+              <div className="flex h-full min-h-[220px] flex-col items-center justify-center text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--primary-light)] text-[var(--primary)] mb-3 shadow-xs">
+                  <ShoppingCart size={24} />
+                </div>
+                <h3 className="text-sm font-bold text-[#111827]">El carrito está vacío</h3>
+                <p className="mt-1 max-w-[200px] text-xs leading-relaxed text-[#6B7280]">
+                  Toca productos del catálogo para comenzar la venta
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {cart.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between rounded-xl border border-[#F3F4F6] bg-[#FAFAFA] p-2.5 transition-all hover:bg-white hover:shadow-xs"
+                  >
+                    <div className="min-w-0 flex-1 pr-2">
+                      <p className="truncate text-xs font-bold text-[#111827]">
+                        {item.name}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-[#6B7280]">
+                        <span>{money(item.price)} c/u</span>
+                        {!item.stockIlimitado && item.stock <= item.stockMinimo && (
+                          <span className="text-[10px] text-amber-700 font-bold bg-amber-50 px-1 rounded">
+                            (Stock: {item.stock})
+                          </span>
+                        )}
+                        {item.stockIlimitado && (
+                          <span className="text-[10px] text-purple-700 font-bold bg-purple-50 px-1 rounded">
+                            (♾️ Ilimitado)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-7 items-center rounded-lg border border-[#E5E7EB] bg-white">
                         <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => {
-                            setNombreCampana(p.titulo);
-                            setMensajeCampana(p.texto);
-                          }}
-                          className={`text-left p-2.5 border text-xs transition-all cursor-pointer rounded ${
-                            mensajeCampana === p.texto
-                              ? "border-emerald-600 bg-emerald-50/50 text-emerald-950 font-bold"
-                              : "border-[#DDDDDD] bg-[#FAFAFA] hover:border-black text-black"
+                          onClick={() => changeQuantity(item.id, -1)}
+                          className="flex h-full w-6 items-center justify-center text-[#6B7280] hover:text-black cursor-pointer"
+                        >
+                          <Minus size={11} />
+                        </button>
+                        <span className="w-5 text-center text-xs font-bold text-black font-mono">
+                          {item.quantity}
+                        </span>
+                        <button
+                          onClick={() => changeQuantity(item.id, 1)}
+                          disabled={!item.stockIlimitado && item.quantity >= item.stock}
+                          title={!item.stockIlimitado && item.quantity >= item.stock ? "Stock máximo alcanzado" : "Añadir unidad"}
+                          className={`flex h-full w-6 items-center justify-center transition-colors ${
+                            !item.stockIlimitado && item.quantity >= item.stock
+                              ? "opacity-30 cursor-not-allowed text-gray-300"
+                              : "text-[#6B7280] hover:text-black cursor-pointer"
                           }`}
                         >
-                          <p className="font-bold truncate">{p.nombre}</p>
-                          <p className="text-[10px] text-[#777777] line-clamp-1 mt-0.5">{p.texto}</p>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Nombre de la Campaña */}
-                  <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-[#555555] mb-1">
-                      Nombre de la Campaña *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={nombreCampana}
-                      onChange={(e) => setNombreCampana(e.target.value)}
-                      placeholder="Ej. Promoción de Fin de Semana para Clientes Frecuentes..."
-                      className="w-full border border-[#DDDDDD] bg-white px-3.5 py-2 text-xs font-semibold text-black outline-none focus:border-black"
-                    />
-                  </div>
-
-                  {/* Mensaje con Chips de Variables */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[#555555]">
-                        Mensaje para WhatsApp *
-                      </label>
-                      <span className="text-[10px] text-[#888888]">Variables dinámicas disponibles:</span>
-                    </div>
-
-                    {/* Chips de Inserción Rápida */}
-                    <div className="flex flex-wrap gap-1.5 mb-2">
-                      {[
-                        { tag: "{cliente}", desc: "Nombre cliente" },
-                        { tag: "{organizacion}", desc: "Tu negocio" },
-                        { tag: "{telefono_org}", desc: "WhatsApp negocio" },
-                        { tag: "{puntos}", desc: "Puntos" },
-                        { tag: "{descuento}", desc: "% Descuento" },
-                      ].map((item) => (
-                        <button
-                          key={item.tag}
-                          type="button"
-                          onClick={() => setMensajeCampana((prev) => `${prev} ${item.tag}`)}
-                          className="bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded transition-colors cursor-pointer"
-                        >
-                          + {item.tag} ({item.desc})
-                        </button>
-                      ))}
-                    </div>
-
-                    <textarea
-                      rows={5}
-                      required
-                      value={mensajeCampana}
-                      onChange={(e) => setMensajeCampana(e.target.value)}
-                      placeholder="Redacta el mensaje de la campaña..."
-                      className="w-full border border-[#DDDDDD] bg-white p-3 text-xs text-black outline-none focus:border-black font-sans leading-relaxed"
-                    />
-                  </div>
-
-                  {/* Selector de Clientes Destinatarios */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[#555555]">
-                        Destinatarios Seleccionados ({clientesSeleccionadosIds.length} de {clientes.filter((c) => Boolean(c.telefono)).length} con WhatsApp)
-                      </label>
-                      <div className="space-x-2 text-[10px]">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setClientesSeleccionadosIds(
-                              clientes.filter((c) => Boolean(c.telefono)).map((c) => c.id)
-                            )
-                          }
-                          className="font-bold text-emerald-700 hover:underline cursor-pointer"
-                        >
-                          Seleccionar todos
-                        </button>
-                        <span>·</span>
-                        <button
-                          type="button"
-                          onClick={() => setClientesSeleccionadosIds([])}
-                          className="font-bold text-gray-500 hover:underline cursor-pointer"
-                        >
-                          Deseleccionar
+                          <Plus size={11} />
                         </button>
                       </div>
-                    </div>
 
-                    <div className="border border-[#EEEEEE] max-h-48 overflow-y-auto divide-y divide-[#F5F5F5] bg-[#FAFAFA]">
-                      {clientes.filter((c) => Boolean(c.telefono)).length === 0 ? (
-                        <div className="p-4 text-center text-xs text-[#888888]">
-                          No tienes clientes registrados con número telefónico. Da de alta clientes en el módulo de Clientes.
-                        </div>
-                      ) : (
-                        clientes
-                          .filter((c) => Boolean(c.telefono))
-                          .map((cli) => {
-                            const isChecked = clientesSeleccionadosIds.includes(cli.id);
-                            return (
-                              <label
-                                key={cli.id}
-                                className={`flex items-center justify-between p-2.5 text-xs cursor-pointer transition-colors ${
-                                  isChecked ? "bg-white" : "hover:bg-gray-100 opacity-70"
-                                }`}
-                              >
-                                <div className="flex items-center gap-2.5">
-                                  <input
-                                    type="checkbox"
-                                    checked={isChecked}
-                                    onChange={(e) => {
-                                      if (e.target.checked) {
-                                        setClientesSeleccionadosIds((prev) => [...prev, cli.id]);
-                                      } else {
-                                        setClientesSeleccionadosIds((prev) => prev.filter((id) => id !== cli.id));
-                                      }
-                                    }}
-                                    className="h-4 w-4 rounded accent-emerald-600 cursor-pointer"
-                                  />
-                                  <div>
-                                    <p className="font-bold text-black">{cli.nombre}</p>
-                                    <p className="text-[10px] font-mono text-[#777777]">
-                                      WhatsApp: {cli.telefono} · {cli.puntos || 0} pts
-                                    </p>
-                                  </div>
-                                </div>
-                                <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                                  Listo para envío
-                                </span>
-                              </label>
-                            );
-                          })
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Botón de Enviar Campaña */}
-                  <div className="pt-2">
-                    <button
-                      type="button"
-                      onClick={handleDispararCampana}
-                      disabled={enviandoCampana || clientesSeleccionadosIds.length === 0}
-                      className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-xs cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      {enviandoCampana ? (
-                        <Loader2 size={16} className="animate-spin" />
-                      ) : (
-                        <Send size={16} />
-                      )}
-                      <span>
-                        Enviar Campaña WhatsApp a {clientesSeleccionadosIds.length} Clientes
+                      <span className="min-w-[45px] text-right text-xs font-bold text-black font-mono">
+                        {money(item.price * item.quantity)}
                       </span>
-                    </button>
-                  </div>
-                </div>
 
-                {/* LADO DERECHO: VISTA PREVIA EN CHAT DE WHATSAPP */}
-                <div className="lg:col-span-5 space-y-4">
-                  <div className="border border-[#DDDDDD] bg-[#EFEAE2] rounded-xl overflow-hidden shadow-md">
-                    {/* Header Verde WhatsApp */}
-                    <div className="bg-[#075E54] text-white p-3.5 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center font-bold text-sm">
-                          {orgData?.nombre ? orgData.nombre.charAt(0).toUpperCase() : "I"}
-                        </div>
-                        <div>
-                          <p className="font-bold text-xs leading-tight">
-                            {orgData?.nombre || "Inagerlis Inc"}
-                          </p>
-                          <p className="text-[10px] text-emerald-200">
-                            en línea · Cuenta Comercial Verificada
-                          </p>
-                        </div>
-                      </div>
-                      <Smartphone size={18} className="text-white/80" />
-                    </div>
-
-                    {/* Cuerpo de Chat con Burbuja */}
-                    <div className="p-4 min-h-[300px] flex flex-col justify-end space-y-3">
-                      <div className="self-center bg-[#FFEECD] text-[#554228] px-3 py-1 rounded-md text-[10px] text-center font-medium shadow-2xs">
-                        🔒 Los mensajes están cifrados de extremo a extremo.
-                      </div>
-
-                      {/* Burbuja Verde Saliente */}
-                      <div className="self-end max-w-[90%] bg-[#DCF8C6] text-black p-3.5 rounded-lg rounded-tr-none shadow-sm text-xs leading-relaxed font-sans space-y-1.5">
-                        <p className="whitespace-pre-line">{previewMensaje}</p>
-                        <div className="flex items-center justify-end gap-1 text-[9px] text-gray-500 font-mono">
-                          <span>{new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-                          <span className="text-blue-500 font-bold">✓✓</span>
-                        </div>
-                      </div>
+                      <button
+                        onClick={() => removeProduct(item.id)}
+                        className="ml-0.5 text-[#9CA3AF] hover:text-[#EF4444] cursor-pointer"
+                      >
+                        <Trash2 size={13} />
+                      </button>
                     </div>
                   </div>
-
-                  {/* Panel de Resultado de Envío si se disparó */}
-                  {resultadoEnvio && (
-                    <div className="border border-emerald-300 bg-white p-4 shadow-sm space-y-3 animate-in fade-in duration-200">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-bold text-black flex items-center gap-1.5">
-                          <CheckCircle2 size={15} className="text-emerald-600" />
-                          <span>Campaña Preparada con Éxito ({resultadoEnvio.destinatarios.length} clientes)</span>
-                        </h4>
-                        <button
-                          type="button"
-                          onClick={() => setResultadoEnvio(null)}
-                          className="text-gray-400 hover:text-black"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-
-                      <p className="text-[11px] text-[#666666]">
-                        Haz clic en cada cliente para abrir WhatsApp directamente con el mensaje personalizado listo para enviar:
-                      </p>
-
-                      <div className="max-h-48 overflow-y-auto divide-y divide-gray-100 text-xs">
-                        {resultadoEnvio.destinatarios.map((dest) => (
-                          <div key={dest.clienteId} className="py-2 flex items-center justify-between gap-2">
-                            <div>
-                              <p className="font-bold text-black">{dest.nombre}</p>
-                              <p className="text-[10px] font-mono text-[#888888]">{dest.telefono}</p>
-                            </div>
-                            <a
-                              href={dest.whatsappUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-[11px] font-bold shadow-2xs transition-colors"
-                            >
-                              <MessageCircle size={12} />
-                              <span>Abrir Chat</span>
-                            </a>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Historial Resumido de Campañas Anteriores */}
-                  <div className="border border-[#E5E5E5] bg-white p-4 shadow-2xs">
-                    <h4 className="text-xs font-bold text-black mb-2 flex items-center justify-between">
-                      <span>Campañas Registradas ({campanas.length})</span>
-                      <span className="text-[10px] text-[#888888]">Bitácora</span>
-                    </h4>
-
-                    {campanas.length === 0 ? (
-                      <p className="text-xs text-[#888888] italic py-2">Sin campañas previas registradas.</p>
-                    ) : (
-                      <div className="divide-y divide-[#F0F0F0] text-xs">
-                        {campanas.slice(0, 5).map((c) => (
-                          <div key={c.id} className="py-2 flex items-center justify-between">
-                            <div>
-                              <p className="font-bold text-black">{c.nombre}</p>
-                              <p className="text-[10px] text-[#777777]">
-                                {new Date(c.createdAt).toLocaleDateString("es-MX")} · {c.totalDestinatarios || 0} destinatarios
-                              </p>
-                            </div>
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                              {c.estado}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                ))}
               </div>
+            )}
+          </div>
+
+          {/* TOTALES Y BOTÓN DE COBRAR */}
+          <div className="border-t border-[#E5E7EB] bg-white p-5 space-y-3.5">
+            {/* Desglose de Pago */}
+            <div className="space-y-1.5 text-xs text-[#6B7280]">
+              <div className="flex justify-between">
+                <span>Subtotal</span>
+                <span className="font-semibold text-[#111827]">{money(subtotalBruto)}</span>
+              </div>
+
+              {/* Descuento por Cliente */}
+              {descuentoMonto > 0 && (
+                <div className="flex justify-between text-emerald-600 font-semibold bg-emerald-50 px-2 py-1 rounded">
+                  <span className="flex items-center gap-1">
+                    <Percent size={11} />
+                    Descuento cliente ({clienteDescuentoPorcentaje}%)
+                  </span>
+                  <span>-{money(descuentoMonto)}</span>
+                </div>
+              )}
+
+              <div className="flex justify-between">
+                <span>IVA (16%)</span>
+                <span className="font-semibold text-[#111827]">{money(tax)}</span>
+              </div>
+
+              {selectedCustomer && (
+                <div className="flex items-center justify-between border-t border-dashed border-[#E5E7EB] pt-1 text-[11px] text-[#B45309]">
+                  <span className="flex items-center gap-1 font-semibold">
+                    <Award size={11} />
+                    Puntos a acumular
+                  </span>
+                  <span className="font-bold">+{puntosEstimados} pts</span>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+
+            {/* Total Destacado */}
+            <div className="flex items-center justify-between border-t border-[#F3F4F6] pt-2">
+              <span className="text-sm font-bold text-[#111827]">Total Pagar</span>
+              <span className="text-2xl font-bold text-[var(--primary)]">
+                {money(total)}
+              </span>
+            </div>
+
+            {/* Botón Principal de Cobro */}
+            <button
+              disabled={cart.length === 0}
+              onClick={() => setIsPaymentModalOpen(true)}
+              className="
+                flex h-12 w-full items-center justify-center rounded-xl
+                bg-[var(--primary)] text-sm font-bold text-white
+                shadow-sm transition-all hover:bg-[var(--primary-hover)]
+                disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none
+              "
+            >
+              Cobrar {cart.length > 0 ? money(total) : ""}
+            </button>
+          </div>
+        </aside>
       </div>
 
-      {/* MODAL DETALLE DE TICKET DE VENTA */}
-      {selectedVenta && (
-        <div
-          onClick={() => setSelectedVenta(null)}
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-150 cursor-pointer overflow-y-auto"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative my-auto flex w-full max-w-md flex-col border border-[#DDDDDD] bg-white shadow-2xl cursor-default overflow-hidden animate-in zoom-in-95 duration-150"
-          >
-            {/* Header del Ticket */}
-            <div className="flex items-center justify-between border-b border-[#EEEEEE] px-6 py-4 bg-[#FAFAFA]">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center bg-black text-white">
-                  <Receipt size={18} />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-black font-mono">
-                    Ticket #{selectedVenta.folio}
-                  </h3>
-                  <p className="text-xs text-[#777777]">
-                    {new Date(selectedVenta.createdAt).toLocaleString("es-MX")}
-                  </p>
-                </div>
+      {/* MODAL DE SELECCIÓN O REGISTRO RÁPIDO DE CLIENTE */}
+      {isCustomerModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl bg-white shadow-2xl overflow-hidden border border-[#D8A814]">
+            {/* Header del Modal */}
+            <div className="flex items-center justify-between border-b border-[#EEEEEE] bg-[#FAFAFA] px-6 py-4">
+              <div>
+                <h3 className="text-base font-bold text-black">
+                  {isQuickAddOpen ? "Registrar Cliente Rápido" : "Vincular Cliente a la Venta"}
+                </h3>
+                <p className="text-xs text-[#777777]">
+                  {isQuickAddOpen
+                    ? "Guarda los datos del cliente para otorgar descuentos y puntos"
+                    : "Selecciona un cliente para aplicar su descuento preferencial"}
+                </p>
               </div>
               <button
-                type="button"
-                onClick={() => setSelectedVenta(null)}
-                className="flex h-8 w-8 items-center justify-center text-[#777777] hover:text-black hover:bg-gray-100 transition-colors cursor-pointer"
+                onClick={() => {
+                  setIsCustomerModalOpen(false);
+                  setIsQuickAddOpen(false);
+                }}
+                className="text-[#999999] hover:text-black"
               >
                 <X size={18} />
               </button>
             </div>
 
-            {/* Cuerpo del Ticket */}
-            <div className="p-6 space-y-4 text-xs font-mono">
-              <div className="border-b border-dashed border-gray-300 pb-3 space-y-1">
-                <p className="font-bold text-black text-center text-sm">
-                  {orgData?.nombre || "Inagerlis Inc"}
-                </p>
-                <p className="text-[11px] text-gray-500 text-center">
-                  Cliente: {selectedVenta.cliente?.nombre || "Público General"}
-                </p>
-                {selectedVenta.cliente?.telefono && (
-                  <p className="text-[11px] text-emerald-700 text-center">
-                    Tel: {selectedVenta.cliente.telefono}
-                  </p>
-                )}
-                <p className="text-[11px] text-gray-500 text-center">
-                  Método de pago: {selectedVenta.metodoPago}
-                </p>
-              </div>
+            {isQuickAddOpen ? (
+              /* FORMULARIO DE REGISTRO RÁPIDO DENTRO DE POS */
+              <form onSubmit={handleCreateQuickCustomer} className="p-6 space-y-4">
+                <div>
+                  <label className="mb-1 block text-xs font-bold uppercase text-black">
+                    Nombre Completo *
+                  </label>
+                  <input
+                    required
+                    value={newCustNombre}
+                    onChange={(e) => setNewCustNombre(e.target.value)}
+                    placeholder="Ej. Roberto Sánchez"
+                    className="h-10 w-full rounded-lg border border-[#D8A814] px-3 text-sm text-black outline-none focus:border-black"
+                  />
+                </div>
 
-              {/* Lista de Artículos */}
-              <div className="divide-y divide-gray-100 max-h-56 overflow-y-auto">
-                {selectedVenta.detalles.map((item) => (
-                  <div key={item.id} className="py-2 flex items-center justify-between">
-                    <div>
-                      <p className="font-bold text-black">{item.articulo?.nombre || "Artículo"}</p>
-                      <p className="text-[10px] text-gray-500">
-                        {item.cantidad} x ${Number(item.precioUnitario).toFixed(2)}
-                      </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-bold uppercase text-black">
+                      Teléfono
+                    </label>
+                    <input
+                      value={newCustTelefono}
+                      onChange={(e) => setNewCustTelefono(e.target.value)}
+                      placeholder="222 123 4567"
+                      className="h-10 w-full rounded-lg border border-[#E5E7EB] px-3 text-sm text-black outline-none focus:border-[#D8A814]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-bold uppercase text-black">
+                      RFC (Opcional)
+                    </label>
+                    <input
+                      value={newCustRfc}
+                      onChange={(e) => setNewCustRfc(e.target.value.toUpperCase())}
+                      placeholder="XAXX010101000"
+                      className="h-10 w-full rounded-lg border border-[#E5E7EB] px-3 text-sm uppercase text-black outline-none focus:border-[#D8A814]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-bold uppercase text-black">
+                    % Descuento Preferencial
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      value={newCustDescuento}
+                      onChange={(e) => setNewCustDescuento(Number(e.target.value))}
+                      placeholder="0"
+                      className="h-10 w-full rounded-lg border border-[#E5E7EB] px-3 pr-8 text-sm font-bold text-black outline-none focus:border-[#D8A814]"
+                    />
+                    <span className="absolute right-3 top-2.5 text-xs font-bold text-gray-500">%</span>
+                  </div>
+                  <p className="mt-1 text-[11px] text-gray-500">
+                    Se aplicará a esta venta y a las futuras compras de este cliente.
+                  </p>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3 border-t border-[#EEEEEE]">
+                  <button
+                    type="button"
+                    onClick={() => setIsQuickAddOpen(false)}
+                    className="h-10 rounded-lg border border-[#CCCCCC] px-4 text-xs font-bold text-[#555555] hover:bg-[#F3F4F6]"
+                  >
+                    Volver a lista
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingNewCustomer}
+                    className="h-10 rounded-lg bg-[#D8A814] px-5 text-xs font-bold text-white hover:bg-black transition-colors disabled:opacity-50"
+                  >
+                    {savingNewCustomer ? "Guardando..." : "Guardar y Vincular"}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* LISTA DE BÚSQUEDA Y SELECCIÓN DE CLIENTES */
+              <div className="flex flex-col flex-1 overflow-hidden p-5">
+                <div className="flex gap-2 mb-3">
+                  <div className="relative flex-1">
+                    <Search
+                      size={16}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999999]"
+                    />
+                    <input
+                      value={customerSearch}
+                      onChange={(e) => setCustomerSearch(e.target.value)}
+                      placeholder="Buscar por nombre, teléfono o RFC..."
+                      className="h-10 w-full rounded-lg border border-[#E5E7EB] pl-9 pr-3 text-xs text-black outline-none focus:border-[#D8A814]"
+                    />
+                  </div>
+
+                  <button
+                    onClick={() => setIsQuickAddOpen(true)}
+                    className="inline-flex items-center gap-1 rounded-lg bg-black px-3 py-2 text-xs font-bold text-white hover:bg-[#D8A814] transition-colors flex-none"
+                  >
+                    <Plus size={13} />
+                    Nuevo
+                  </button>
+                </div>
+
+                {/* Opción para Público General (Desvincular) */}
+                <button
+                  onClick={() => {
+                    setSelectedCustomer(null);
+                    setIsCustomerModalOpen(false);
+                  }}
+                  className="mb-2 flex items-center justify-between rounded-xl border border-[#E5E7EB] bg-[#FAFAFA] p-3 text-left hover:border-black transition-all"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E5E7EB] text-xs font-bold text-black">
+                      PG
                     </div>
-                    <span className="font-bold text-black">
-                      ${Number(item.subtotal).toFixed(2)}
+                    <div>
+                      <p className="text-xs font-bold text-black">Público General</p>
+                      <p className="text-[10px] text-[#888888]">Venta estándar sin beneficios</p>
+                    </div>
+                  </div>
+                  {!selectedCustomer && (
+                    <span className="text-xs font-bold text-emerald-600">Actual</span>
+                  )}
+                </button>
+
+                {/* Lista con Scroll de Clientes */}
+                <div className="flex-1 overflow-y-auto space-y-2 pr-1 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-[#D1D5DB] max-h-[340px]">
+                  {loadingClientes ? (
+                    <div className="flex h-32 items-center justify-center">
+                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#D8A814] border-t-transparent" />
+                    </div>
+                  ) : filteredModalClientes.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-[#888888]">
+                      No se encontraron clientes con "{customerSearch}".
+                    </div>
+                  ) : (
+                    filteredModalClientes.map((c) => {
+                      const isSelected = selectedCustomer?.id === c.id;
+
+                      return (
+                        <button
+                          key={c.id}
+                          onClick={() => {
+                            setSelectedCustomer(c);
+                            setIsCustomerModalOpen(false);
+                          }}
+                          className={`flex w-full items-center justify-between rounded-xl border p-3 text-left transition-all ${
+                            isSelected
+                              ? "border-2 border-[#D8A814] bg-[#FFFBEB]"
+                              : "border-[#EEEEEE] bg-white hover:border-[#D1D5DB] hover:bg-[#F9FAFB]"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-black font-bold text-white text-xs">
+                              {c.nombre.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate text-xs font-bold text-black">
+                                {c.nombre}
+                              </p>
+                              <p className="text-[10px] text-[#777777] truncate">
+                                {c.telefono || c.rfc || "Sin teléfono"}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 flex-none pl-2">
+                            {c.descuento > 0 && (
+                              <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-200">
+                                {c.descuento}% desc.
+                              </span>
+                            )}
+                            <span className="rounded bg-[#FFFBEB] px-1.5 py-0.5 text-[10px] font-bold text-[#B45309] border border-[#FDE68A]">
+                              {c.puntos || 0} pts
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE COBRO / PAGO CON FOLIO REAL Y CONFIRMACIÓN */}
+      {isPaymentModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-[#EEEEEE]">
+            <div className="flex items-center justify-between border-b border-[#EEEEEE] pb-4">
+              <h3 className="text-lg font-bold text-black">
+                {paymentSuccess ? "Comprobante de Venta" : "Procesar Cobro"}
+              </h3>
+              {!processingPayment && (
+                <button
+                  onClick={() => setIsPaymentModalOpen(false)}
+                  className="text-[#999999] hover:text-black"
+                >
+                  <X size={20} />
+                </button>
+              )}
+            </div>
+
+            {paymentSuccess ? (
+              <div className="my-6 flex flex-col items-center text-center">
+                <CheckCircle2 size={54} className="text-emerald-500 animate-bounce" />
+                <h4 className="mt-3 text-xl font-bold text-black">¡Venta Registrada Exitosamente!</h4>
+                
+                {/* Folio y Monto */}
+                <div className="mt-4 w-full rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-4 text-left space-y-2 text-xs">
+                  <div className="flex justify-between items-center pb-2 border-b border-[#E5E5E5]">
+                    <span className="text-[#6B7280]">Folio de Ticket:</span>
+                    <span className="font-mono text-sm font-bold text-black">
+                      {lastSaleResult?.folio || "T-000000"}
                     </span>
                   </div>
-                ))}
-              </div>
 
-              {/* Totales */}
-              <div className="border-t border-dashed border-gray-300 pt-3 space-y-1 text-right">
-                <div className="flex justify-between text-gray-600">
-                  <span>Subtotal:</span>
-                  <span>${Number(selectedVenta.subtotal).toFixed(2)}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#6B7280]">Total Cobrado:</span>
+                    <span className="text-base font-bold text-[var(--primary)]">
+                      {money(total)}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#6B7280]">Método de Pago:</span>
+                    <span className="font-semibold text-black uppercase">
+                      {paymentMethod}
+                    </span>
+                  </div>
+
+                  {selectedCustomer && (
+                    <div className="mt-2 pt-2 border-t border-[#E5E5E5] space-y-1">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[#6B7280]">Cliente Vinculado:</span>
+                        <span className="font-bold text-black truncate max-w-[180px]">
+                          {selectedCustomer.nombre}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-[#B45309] font-bold">
+                        <span>Puntos Acumulados:</span>
+                        <span>+{puntosEstimados} pts</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                {Number(selectedVenta.descuento) > 0 && (
-                  <div className="flex justify-between text-emerald-700">
-                    <span>Descuento aplicado:</span>
-                    <span>-${Number(selectedVenta.descuento).toFixed(2)}</span>
+
+                <div className="mt-6 flex w-full gap-3">
+                  <button
+                    onClick={handleNuevaVenta}
+                    className="flex-1 rounded-xl bg-black py-3 text-xs font-bold text-white hover:bg-[#D8A814] transition-colors"
+                  >
+                    Nueva Venta
+                  </button>
+
+                  <button
+                    onClick={() => router.push("/clientes")}
+                    className="flex-1 rounded-xl border border-[#CCCCCC] py-3 text-xs font-bold text-black hover:bg-[#F3F4F6] transition-colors"
+                  >
+                    Ver en Clientes
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-5 space-y-5">
+                <div className="rounded-xl bg-[#F9FAFB] p-4 text-center">
+                  <p className="text-xs uppercase tracking-wider text-[#6B7280]">Total a cobrar</p>
+                  <p className="mt-1 text-3xl font-bold text-[var(--primary)]">{money(total)}</p>
+                  {descuentoMonto > 0 && (
+                    <p className="mt-1 text-xs text-emerald-600 font-semibold">
+                      Descuento aplicado: -{money(descuentoMonto)}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-xs font-bold uppercase text-[#374151]">
+                    Método de Pago
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { id: "efectivo", label: "Efectivo", icon: Banknote },
+                      { id: "tarjeta", label: "Tarjeta", icon: CreditCard },
+                      { id: "otro", label: "Otro", icon: WalletCards },
+                    ].map((method) => {
+                      const Icon = method.icon;
+                      const active = paymentMethod === method.id;
+                      return (
+                        <button
+                          key={method.id}
+                          type="button"
+                          onClick={() => setPaymentMethod(method.id as any)}
+                          className={`flex flex-col items-center justify-center p-3 rounded-xl border text-xs font-bold transition-all ${
+                            active
+                              ? "border-2 border-[var(--primary)] bg-[var(--primary-light)] text-[var(--primary)]"
+                              : "border-[#E5E7EB] bg-white text-[#4B5563] hover:border-[#9CA3AF]"
+                          }`}
+                        >
+                          <Icon size={20} className="mb-1" />
+                          {method.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {selectedCustomer && (
+                  <div className="rounded-lg bg-[#FFFBEB] p-3 text-xs text-[#92400E] border border-[#FDE68A] flex items-center justify-between">
+                    <div>
+                      <span className="font-bold block">{selectedCustomer.nombre}</span>
+                      <span className="text-[11px]">Se registrará esta venta en su historial</span>
+                    </div>
+                    <span className="font-bold text-[#B45309]">+{puntosEstimados} pts</span>
                   </div>
                 )}
-                <div className="flex justify-between text-base font-black text-black pt-1 border-t border-gray-200">
-                  <span>TOTAL:</span>
-                  <span>${Number(selectedVenta.total).toFixed(2)} MXN</span>
-                </div>
-              </div>
-            </div>
 
-            {/* Footer con Acciones */}
-            <div className="border-t border-[#EEEEEE] bg-[#FAFAFA] px-6 py-4 flex items-center justify-between">
-              {selectedVenta.cliente?.telefono ? (
                 <button
-                  type="button"
-                  onClick={() => handleEnviarTicketWhatsApp(selectedVenta)}
-                  className="inline-flex items-center gap-1.5 h-10 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 rounded shadow-xs transition-colors cursor-pointer"
+                  onClick={handleProcessPayment}
+                  disabled={processingPayment}
+                  className="mt-4 flex h-12 w-full items-center justify-center rounded-xl bg-[var(--primary)] text-sm font-bold text-white shadow-md hover:bg-[var(--primary-hover)] transition-all disabled:opacity-50"
                 >
-                  <MessageCircle size={15} />
-                  <span>Compartir por WhatsApp</span>
+                  {processingPayment ? "Registrando Venta..." : "Confirmar Cobro"}
                 </button>
-              ) : (
-                <span className="text-[11px] text-gray-400">Sin teléfono vinculado</span>
-              )}
-
-              <button
-                type="button"
-                onClick={() => setSelectedVenta(null)}
-                className="h-10 bg-black text-white text-xs font-bold uppercase tracking-wider px-4 hover:bg-[var(--primary)] transition-colors cursor-pointer"
-              >
-                Cerrar
-              </button>
-            </div>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -158,7 +158,7 @@ export default function POSHeader({
       <div className="flex h-[58px] items-center border-b border-[#DDDDDD] bg-white px-7">
         <nav className="flex h-full items-center">
           <button
-            onClick={() => router.push("/pos")}
+            onClick={() => router.push("/ventas")}
             className={`flex h-full items-center gap-2 border-b-2 px-5 text-sm font-bold transition-colors ${
               activeTab === "venta"
                 ? "border-[#D8A814] text-[#D8A814]"
@@ -241,7 +241,7 @@ export default function POSHeader({
           <button
             onClick={() => {
               if (onNuevaVenta) onNuevaVenta();
-              else router.push("/pos");
+              else router.push("/ventas");
             }}
             className="h-9 border border-[#D8A814] px-4 text-xs font-bold text-[#D8A814] hover:bg-[#D8A814] hover:text-white transition-colors"
           >

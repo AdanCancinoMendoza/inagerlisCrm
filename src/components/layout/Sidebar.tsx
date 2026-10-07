@@ -25,6 +25,7 @@ import {
   CreditCard,
   LogOut,
   Download,
+  BarChart3,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -148,6 +149,28 @@ export default function Sidebar() {
           >
             <House size={18} strokeWidth={1.8} />
             {!collapsed && <span>Inicio</span>}
+          </button>
+        )}
+
+        {/* Ventas (Productos, Carrito y Pagar) */}
+        {canVer("ventas") && (
+          <button
+            onClick={() => goTo("/ventas")}
+            title="Ventas"
+            className={`
+              mt-2 flex h-12 w-full items-center
+              border-l-2 transition-colors
+              ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
+              text-sm font-medium
+              ${
+                pathname.startsWith("/ventas")
+                  ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
+                  : "border-transparent text-[#C5C5C5] hover:text-white"
+              }
+            `}
+          >
+            <ShoppingCart size={18} strokeWidth={1.8} />
+            {!collapsed && <span>Ventas</span>}
           </button>
         )}
 
@@ -367,22 +390,22 @@ export default function Sidebar() {
 
             {canVer("ventas") && (
               <button
-                onClick={() => goTo("/ventas")}
-                title="Ventas"
+                onClick={() => goTo("/analiticas")}
+                title="Analíticas"
                 className={`
                   flex h-12 w-full items-center
                   border-l-2 transition-colors
                   ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
                   text-sm font-medium
                   ${
-                    pathname.startsWith("/ventas")
+                    pathname.startsWith("/analiticas")
                       ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
                       : "border-transparent text-[#C5C5C5] hover:text-white"
                   }
                 `}
               >
-                <ShoppingCart size={18} strokeWidth={1.8} />
-                {!collapsed && <span>Ventas</span>}
+                <BarChart3 size={18} strokeWidth={1.8} />
+                {!collapsed && <span>Analíticas</span>}
               </button>
             )}
 
