@@ -39,19 +39,19 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isAuthenticated === false && !isPublic) {
       const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            router.push("/login");
-            return 0;
-          }
-          return prev - 1;
-        });
+        setCountdown((prev) => (prev > 0 ? prev - 1 : 0));
       }, 1000);
 
       return () => clearInterval(timer);
     }
-  }, [isAuthenticated, isPublic, router]);
+  }, [isAuthenticated, isPublic]);
+
+  // Redirección al llegar a 0
+  useEffect(() => {
+    if (isAuthenticated === false && !isPublic && countdown === 0) {
+      router.push("/login");
+    }
+  }, [isAuthenticated, isPublic, countdown, router]);
 
   // Si está autenticado o es ruta pública, renderizar la app normalmente
   if (isAuthenticated === true || isPublic) {

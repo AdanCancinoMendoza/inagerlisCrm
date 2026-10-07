@@ -10,20 +10,31 @@ import { getCatalogoSemillaFrontend } from "@/data/catalogosSemilla";
 
 import {
   AlertCircle,
+  Apple,
+  Boxes,
   Building2,
   CalendarDays,
   Check,
   CheckCircle2,
   ChevronRight,
+  Crown,
+  Database,
   Eye,
   Globe,
+  HardDrive,
+  HelpCircle,
+  Info,
   Loader2,
   LogIn,
   MapPin,
+  Minus,
   Package,
+  Pill,
   ShieldCheck,
+  Shirt,
   ShoppingBag,
   ShoppingCart,
+  Smartphone,
   Sparkles,
   Store,
   Tag,
@@ -31,9 +42,6 @@ import {
   UserRoundCheck,
   Utensils,
   Wrench,
-  Pill,
-  Shirt,
-  Smartphone,
 } from "lucide-react";
 
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -46,6 +54,14 @@ const GIROS_LISTA = [
     icon: ShoppingCart,
     catalogoDisponible: true,
     articulosCount: "25+ artículos",
+  },
+  {
+    id: "FRUTERIA",
+    nombre: "Frutería, Verdulería y Perecederos",
+    descripcion: "Frutas frescas, verduras, hortalizas, tubérculos y hierbas del país",
+    icon: Apple,
+    catalogoDisponible: true,
+    articulosCount: "35+ artículos (PLU / Granel)",
   },
   {
     id: "FARMACIA",
@@ -97,6 +113,88 @@ const GIROS_LISTA = [
   },
 ];
 
+const PLANES_LISTA = [
+  {
+    id: "GRATUITO",
+    nombre: "Plan Gratuito",
+    tagline: "Estación Local Offline",
+    badge: "100% Gratis",
+    badgeColor: "bg-[#F3F4F6] text-[#374151] border-[#E5E7EB]",
+    icon: HardDrive,
+    descripcion: "Operación independiente en una sola computadora sin conexión a internet.",
+    incluye: [
+      "Operación 100% en local (modo offline)",
+      "1 Sucursal física",
+      "1 Terminal / Caja de cobro",
+      "1 Cajero / Usuario operativo",
+      "Cobro ágil de tickets",
+    ],
+    noIncluye: [
+      "Sin guardado en base de datos remota / nube",
+      "Sin exportación de estadísticas ni métricas",
+      "Sin facturación electrónica",
+    ],
+  },
+  {
+    id: "BASICO",
+    nombre: "Plan Básico",
+    tagline: "Comercio en la Nube",
+    badge: "Nube & Respaldos",
+    badgeColor: "bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]",
+    icon: Database,
+    descripcion: "Para negocios que requieren centralización y resguardo de datos en la nube.",
+    incluye: [
+      "Sincronización y base de datos en la nube",
+      "1 Sucursal activa",
+      "Hasta 2 Terminales / Cajas",
+      "Hasta 3 Usuarios / Cajeros",
+      "Reportes de ventas e inventario",
+      "Respaldos automáticos diarios",
+    ],
+    noIncluye: [
+      "Sin facturación electrónica",
+      "Sin traspasos entre sucursales",
+    ],
+  },
+  {
+    id: "PROFESIONAL",
+    nombre: "Plan Profesional",
+    tagline: "Pyme en Crecimiento",
+    badge: "Más Popular",
+    badgeColor: "bg-[#FEF8E7] text-[#B45309] border-[#FDE68A]",
+    icon: Boxes,
+    descripcion: "Control total multi-sucursal con facturación electrónica y analíticas avanzadas.",
+    incluye: [
+      "Todo lo del Plan Básico",
+      "Hasta 3 Sucursales activas",
+      "Terminales y cajas ilimitadas",
+      "Hasta 10 Usuarios con roles y permisos",
+      "Facturación electrónica CFDI",
+      "Exportación de analíticas y estadísticas",
+      "Control de inventario multi-sucursal",
+    ],
+    noIncluye: [],
+  },
+  {
+    id: "EMPRESA",
+    nombre: "Plan Empresarial",
+    tagline: "Cadenas & Franquicias",
+    badge: "Corporativo",
+    badgeColor: "bg-[#FAF5FF] text-[#7E22CE] border-[#E9D5FF]",
+    icon: Crown,
+    descripcion: "Solución de alto rendimiento sin límites, API de conexión y soporte preferente.",
+    incluye: [
+      "Todo lo del Plan Profesional",
+      "Sucursales y Terminales ilimitadas",
+      "Usuarios y cajeros ilimitados",
+      "Facturación electrónica ilimitada",
+      "API de integración y sincronización POS",
+      "Soporte preferencial y monitoreo 24/7",
+    ],
+    noIncluye: [],
+  },
+];
+
 export default function NuevaOrganizacionPage() {
   const router = useRouter();
 
@@ -128,11 +226,13 @@ export default function NuevaOrganizacionPage() {
     adminTelefono: "",
     adminCorreo: "",
     adminPassword: "",
+    adminPin: "",
 
     vendedorNombre: "",
     vendedorTelefono: "",
     vendedorCorreo: "",
     vendedorPassword: "",
+    vendedorPin: "",
 
     plan: "BASICO",
     fechaFin: "",
@@ -222,6 +322,7 @@ export default function NuevaOrganizacionPage() {
         adminTelefono: form.adminTelefono.trim() || undefined,
         adminCorreo: form.adminCorreo.trim(),
         adminPassword: form.adminPassword,
+        adminPin: form.adminPin.trim() || undefined,
 
         plan: form.plan,
         fechaFin: form.fechaFin || undefined,
@@ -232,6 +333,7 @@ export default function NuevaOrganizacionPage() {
         payload.vendedorTelefono = form.vendedorTelefono.trim() || undefined;
         payload.vendedorCorreo = form.vendedorCorreo.trim();
         payload.vendedorPassword = form.vendedorPassword;
+        payload.vendedorPin = form.vendedorPin.trim() || undefined;
       }
 
       const data = await apiRequest("/organizaciones", {
@@ -462,9 +564,9 @@ export default function NuevaOrganizacionPage() {
                     className="flex h-12 w-full items-center justify-between border border-[#DDDDDD] bg-white px-4 text-black outline-none transition-all hover:border-[#D8A814] focus:border-[#D8A814] cursor-pointer shadow-sm group"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl leading-none select-none">
+                      <div className="flex h-7 w-7 items-center justify-center bg-[#F3F3F3] border border-[#E0E0E0] text-base">
                         {getCountryByName(form.pais).flag}
-                      </span>
+                      </div>
                       <span className="text-sm font-semibold text-black">
                         {form.pais || "Seleccionar país"}
                       </span>
@@ -474,7 +576,7 @@ export default function NuevaOrganizacionPage() {
                     </div>
 
                     <span className="text-xs font-bold uppercase tracking-wider text-[#D8A814] group-hover:text-black transition-colors">
-                      Cambiar ➔
+                      Cambiar
                     </span>
                   </button>
                 </div>
@@ -624,16 +726,15 @@ export default function NuevaOrganizacionPage() {
 
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="text-base font-bold text-black">
-                            Catálogo Precargado para Punto de Venta ({catalogoPaisInfo.bandera} {catalogoPaisInfo.pais})
+                          <h3 className="text-base font-bold text-black flex items-center gap-2">
+                            <span>Catálogo inicial de artículos</span>
+                            <span className="text-base">{catalogoPaisInfo.bandera}</span>
+                            <span>({catalogoPaisInfo.pais})</span>
                           </h3>
-                          <span className="bg-[#D8A814] px-2 py-0.5 text-[10px] font-bold text-white uppercase">
-                            Recomendado · {catalogoPaisInfo.monedaCodigo}
-                          </span>
                         </div>
 
                         <p className="mt-1 max-w-xl text-xs leading-relaxed text-[#666666]">
-                          Inyecta automáticamente <strong className="text-black">{catalogoPaisInfo.productos.length} artículos reales</strong> de {catalogoPaisInfo.pais} con sus códigos de barras oficiales auténticos, categorías, precios sugeridos y stock inicial en tu primera sucursal.
+                          Registra una lista base de <strong className="text-black">{catalogoPaisInfo.productos.length} artículos</strong> de {catalogoPaisInfo.pais} con sus códigos de barras oficiales, códigos PLU de báscula y categorías organizadas para agilizar la puesta en marcha de tu punto de venta.
                         </p>
 
                         <div className="mt-2.5 flex items-center gap-2 text-[11px] text-[#888888]">
@@ -658,7 +759,7 @@ export default function NuevaOrganizacionPage() {
                         className="flex h-11 items-center gap-2 border border-black bg-white px-4 text-xs font-bold uppercase tracking-wider text-black hover:bg-black hover:text-white transition-all cursor-pointer shadow-sm"
                       >
                         <Eye size={15} />
-                        <span>Ver catálogo {catalogoPaisInfo.bandera}</span>
+                        <span>Ver catálogo {catalogoPaisInfo.bandera} ({catalogoPaisInfo.pais})</span>
                       </button>
 
                       {/* Switch Activar / Desactivar */}
@@ -669,8 +770,15 @@ export default function NuevaOrganizacionPage() {
                           onChange={(e) => updateField("precargarArticulos", e.target.checked)}
                           className="h-4 w-4 accent-[#D8A814] cursor-pointer"
                         />
-                        <span className="text-xs font-bold text-black">
-                          {form.precargarArticulos ? "✓ Incluir artículos" : "No precargar"}
+                        <span className="text-xs font-bold text-black flex items-center gap-1.5">
+                          {form.precargarArticulos ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[2.5]" />
+                              <span>Incluir artículos</span>
+                            </>
+                          ) : (
+                            <span>No precargar</span>
+                          )}
                         </span>
                       </label>
                     </div>
@@ -825,7 +933,7 @@ export default function NuevaOrganizacionPage() {
 
                   <div>
                     <label className="mb-1.5 block text-xs font-bold uppercase text-[#777777]">
-                      Contraseña <span className="text-red-500">*</span>
+                      Contraseña principal <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="password"
@@ -834,6 +942,26 @@ export default function NuevaOrganizacionPage() {
                       placeholder="Mínimo 6 caracteres"
                       className="h-11 w-full border border-[#DDDDDD] px-4 text-sm text-black outline-none focus:border-[#D8A814]"
                     />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-bold uppercase text-[#777777]">
+                        PIN de acceso rápido (Opcional)
+                      </label>
+                      <span className="text-[11px] font-semibold text-[#D8A814]">4 a 6 dígitos</span>
+                    </div>
+                    <input
+                      type="password"
+                      maxLength={6}
+                      value={form.adminPin}
+                      onChange={(e) => updateField("adminPin", e.target.value.replace(/\D/g, ""))}
+                      placeholder="Ej. 1234 (para inicio táctil en iconos)"
+                      className="h-11 w-full border border-[#DDDDDD] px-4 text-sm text-black outline-none focus:border-[#D8A814]"
+                    />
+                    <p className="mt-1 text-[11px] text-[#888888]">
+                      Permite iniciar sesión rápidamente tocando tu perfil en la pantalla de bienvenida.
+                    </p>
                   </div>
 
                   <div className="mt-4 border-l-2 border-[#D8A814] pl-4">
@@ -909,9 +1037,29 @@ export default function NuevaOrganizacionPage() {
                       type="password"
                       value={form.vendedorPassword}
                       onChange={(e) => updateField("vendedorPassword", e.target.value)}
-                      placeholder="Contraseña o PIN de acceso"
+                      placeholder="Contraseña de acceso"
                       className="h-11 w-full border border-[#DDDDDD] px-4 text-sm text-black outline-none focus:border-[#D8A814]"
                     />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-bold uppercase text-[#777777]">
+                        PIN de acceso rápido (Opcional)
+                      </label>
+                      <span className="text-[11px] font-semibold text-[#D8A814]">4 a 6 dígitos</span>
+                    </div>
+                    <input
+                      type="password"
+                      maxLength={6}
+                      value={form.vendedorPin}
+                      onChange={(e) => updateField("vendedorPin", e.target.value.replace(/\D/g, ""))}
+                      placeholder="Ej. 0000 (para cajero rápido)"
+                      className="h-11 w-full border border-[#DDDDDD] px-4 text-sm text-black outline-none focus:border-[#D8A814]"
+                    />
+                    <p className="mt-1 text-[11px] text-[#888888]">
+                      El cajero podrá acceder al Punto de Venta rápidamente con solo tocar su icono e ingresar este PIN.
+                    </p>
                   </div>
 
                   <div className="mt-4 border-l-2 border-[#D8A814] pl-4">
@@ -936,52 +1084,147 @@ export default function NuevaOrganizacionPage() {
                 </p>
 
                 <h2 className="mt-1 text-xl font-bold text-black">
-                  Acceso a la plataforma y confirmación
+                  Selecciona el plan para tu organización
                 </h2>
+
+                <p className="mt-1 text-sm text-[#888888]">
+                  Elige el esquema de licenciamiento adecuado para el tamaño y operatividad de tu negocio.
+                </p>
               </div>
 
-              <div className="grid grid-cols-1 gap-5 p-7 md:grid-cols-2">
+              <div className="p-7 space-y-6">
+                {/* 1. SELECCIÓN DE PLANES (4 NIVELES) */}
                 <div>
-                  <label className="mb-2 block text-xs font-bold uppercase text-[#777777]">
-                    Plan de acceso
-                  </label>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {PLANES_LISTA.map((plan) => {
+                      const isSelected = form.plan === plan.id;
+                      const PlanIcon = plan.icon;
 
-                  <select
-                    value={form.plan}
-                    onChange={(e) => updateField("plan", e.target.value)}
-                    className="h-12 w-full border border-[#DDDDDD] bg-white px-4 text-black outline-none focus:border-[#D8A814]"
-                  >
-                    <option value="BASICO">Plan Básico</option>
-                    <option value="PROFESIONAL">Plan Profesional</option>
-                    <option value="EMPRESA">Plan Empresa</option>
-                  </select>
-                </div>
+                      return (
+                        <div
+                          key={plan.id}
+                          onClick={() => updateField("plan", plan.id)}
+                          className={`relative flex flex-col justify-between border p-5 transition-all cursor-pointer text-left ${
+                            isSelected
+                              ? "border-[#D8A814] bg-white shadow-md ring-2 ring-[#D8A814]"
+                              : "border-[#EEEEEE] bg-[#FAFAFA] hover:border-[#D8A814] hover:bg-white hover:shadow-sm"
+                          }`}
+                        >
+                          {/* Badge superior y Check si está seleccionado */}
+                          <div className="flex items-center justify-between gap-2">
+                            <span className={`inline-flex items-center border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${plan.badgeColor}`}>
+                              {plan.badge}
+                            </span>
 
-                <div>
-                  <label className="mb-2 block text-xs font-bold uppercase text-[#777777]">
-                    Fecha de vencimiento (Opcional)
-                  </label>
+                            {isSelected && (
+                              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#D8A814] text-white">
+                                <Check size={12} strokeWidth={3} />
+                              </span>
+                            )}
+                          </div>
 
-                  <input
-                    type="date"
-                    value={form.fechaFin}
-                    onChange={(e) => updateField("fechaFin", e.target.value)}
-                    className="h-12 w-full border border-[#DDDDDD] px-4 text-black outline-none focus:border-[#D8A814]"
-                  />
+                          {/* Encabezado del Plan con Icono Distintivo */}
+                          <div className="mt-4">
+                            <div className="flex items-center gap-3">
+                              <div className={`flex h-10 w-10 items-center justify-center border transition-colors ${
+                                isSelected
+                                  ? "border-[#D8A814] bg-[#FEF8E7] text-[#D8A814]"
+                                  : "border-[#E5E5E5] bg-white text-[#555555]"
+                              }`}>
+                                <PlanIcon size={20} strokeWidth={1.8} />
+                              </div>
+
+                              <div>
+                                <h3 className="text-sm font-bold text-black leading-tight">
+                                  {plan.nombre}
+                                </h3>
+                                <p className="text-[11px] font-semibold text-[#888888] mt-0.5">
+                                  {plan.tagline}
+                                </p>
+                              </div>
+                            </div>
+
+                            <p className="mt-3 text-xs leading-relaxed text-[#666666] min-h-[34px]">
+                              {plan.descripcion}
+                            </p>
+                          </div>
+
+                          {/* Lista de Características */}
+                          <div className="mt-4 border-t border-[#EEEEEE] pt-3.5 space-y-2 flex-1">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-[#999999]">
+                              Incluye:
+                            </p>
+                            <ul className="space-y-1.5 text-xs text-[#444444]">
+                              {plan.incluye.map((item, idx) => (
+                                <li key={idx} className="flex items-start gap-1.5 leading-snug">
+                                  <Check size={13} className="mt-0.5 shrink-0 text-emerald-600" />
+                                  <span>{item}</span>
+                                </li>
+                              ))}
+                            </ul>
+
+                            {/* Exclusiones para total claridad */}
+                            {plan.noIncluye && plan.noIncluye.length > 0 && (
+                              <div className="mt-3 border-t border-[#EEEEEE] pt-2.5 space-y-1.5">
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-[#AAAAAA]">
+                                  No incluye:
+                                </p>
+                                <ul className="space-y-1 text-[11px] text-[#888888]">
+                                  {plan.noIncluye.map((item, idx) => (
+                                    <li key={idx} className="flex items-start gap-1.5 leading-snug">
+                                      <Minus size={12} className="mt-0.5 shrink-0 text-[#AAAAAA]" />
+                                      <span>{item}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Botón de Selección */}
+                          <div className="mt-4 pt-3 border-t border-[#EEEEEE]">
+                            <button
+                              type="button"
+                              className={`w-full py-2 text-xs font-bold uppercase tracking-wider transition-colors ${
+                                isSelected
+                                  ? "bg-[#D8A814] text-white"
+                                  : "border border-[#DDDDDD] bg-white text-black hover:border-black"
+                              }`}
+                            >
+                              {isSelected ? "Plan Seleccionado" : "Seleccionar"}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
-              {/* Resumen Completo */}
+              {/* 2. RESUMEN COMPLETO DE LO QUE SE CREARÁ */}
               <div className="border-t border-[#EEEEEE] bg-[#FAFAFA] p-7">
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#D8A814]">
                   Resumen de lo que se creará
                 </p>
 
-                <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
                   <div className="border border-[#EEEEEE] bg-white p-4">
                     <p className="text-[10px] font-bold uppercase text-[#999999]">Organización</p>
                     <p className="mt-1 text-sm font-bold text-black truncate">{form.nombre || "Sin definir"}</p>
                     <p className="text-xs text-[#777777]">{giroSeleccionadoObj.nombre}</p>
+                    <p className="text-[11px] font-semibold text-[#D8A814] mt-0.5">
+                      {catalogoPaisInfo.bandera} {catalogoPaisInfo.pais}
+                    </p>
+                  </div>
+
+                  <div className="border border-[#EEEEEE] bg-white p-4">
+                    <p className="text-[10px] font-bold uppercase text-[#999999]">Plan de Acceso</p>
+                    <p className="mt-1 text-sm font-bold text-black">
+                      {PLANES_LISTA.find((p) => p.id === form.plan)?.nombre || form.plan}
+                    </p>
+                    <p className="text-xs text-[#777777]">
+                      {PLANES_LISTA.find((p) => p.id === form.plan)?.tagline || "Licencia activa"}
+                    </p>
                   </div>
 
                   <div className="border border-[#EEEEEE] bg-white p-4">
@@ -990,12 +1233,12 @@ export default function NuevaOrganizacionPage() {
                       {form.precargarArticulos ? "Artículos Precargados" : "Catálogo Vacío"}
                     </p>
                     <p className="text-xs text-[#D8A814] font-semibold">
-                      {form.precargarArticulos ? "25+ productos listos" : "Carga manual"}
+                      {form.precargarArticulos ? `${catalogoPaisInfo.productos.length} artículos (${catalogoPaisInfo.pais})` : "Carga manual"}
                     </p>
                   </div>
 
                   <div className="border border-[#EEEEEE] bg-white p-4">
-                    <p className="text-[10px] font-bold uppercase text-[#999999]">Sucursal & Caja</p>
+                    <p className="text-[10px] font-bold uppercase text-[#999999]">Sucursal & Terminal</p>
                     <p className="mt-1 text-sm font-bold text-black truncate">{form.sucursalNombre}</p>
                     <p className="text-xs text-[#777777]">Terminal Caja 01</p>
                   </div>

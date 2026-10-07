@@ -11,6 +11,7 @@ import {
   getOrganizacionId,
   getOrganizacionNombre,
   getPerfilesGuardados,
+  getRutaPorPerfil,
   getRutaPorRol,
   setPerfilesGuardados,
   setUsuarioActual,
@@ -59,47 +60,46 @@ export default function ProfileSelector({
 
       const cached = getPerfilesGuardados();
 
-      // Si tenemos perfiles guardados en caché local de una empresa real
+      const formatUser = (p: any, idx: number): PerfilItem => ({
+        id: p.id,
+        letter: (p.nombre || "U").charAt(0).toUpperCase(),
+        name: p.nombre,
+        role:
+          p.perfil?.nombre ||
+          (p.rol === "ADMIN" ? "Administrador" : p.rol === "GERENTE" ? "Gerente" : p.rol === "VENDEDOR" ? "Vendedor" : "Usuario"),
+        email: p.email,
+        route: getRutaPorPerfil(p),
+        background: colorPalette[idx % colorPalette.length].background,
+        textColor: colorPalette[idx % colorPalette.length].textColor,
+      });
+
+      // 1. CARGA INSTANTÁNEA (Cache-First): Si hay datos en caché, mostrar inmediatamente sin spinner (0ms)
       if (cached && cached.length > 0) {
-        const formatted: PerfilItem[] = cached.map((p, idx) => ({
-          id: p.id,
-          letter: (p.nombre || "U").charAt(0).toUpperCase(),
-          name: p.nombre,
-          role: p.rol === "ADMIN" ? "Administrador" : p.rol === "GERENTE" ? "Gerente" : "Vendedor",
-          email: p.email,
-          route: getRutaPorRol(p.rol),
-          background: colorPalette[idx % colorPalette.length].background,
-          textColor: colorPalette[idx % colorPalette.length].textColor,
-        }));
-        setProfilesList(formatted);
+        setProfilesList(cached.map(formatUser));
+        setLoading(false);
       }
 
-      // Si hay un ID de organización en este navegador, consultamos la lista fresca del backend en Render
+      // 2. REVALIDACIÓN EN SEGUNDO PLANO (Stale-While-Revalidate):
+      // Consulta en background para sincronizar cambios sin hacer esperar al usuario
       if (orgId) {
         try {
-          const remoteUsers = await apiRequest<any[]>(`/usuarios/organizacion/${orgId}`);
+          const remoteUsers = await apiRequest<any[]>(`/usuarios/organizacion/${orgId}`, {
+            timeoutMs: 4000,
+          });
+
           if (Array.isArray(remoteUsers) && remoteUsers.length > 0) {
             setPerfilesGuardados(remoteUsers);
-            const formatted: PerfilItem[] = remoteUsers.map((p, idx) => ({
-              id: p.id,
-              letter: (p.nombre || "U").charAt(0).toUpperCase(),
-              name: p.nombre,
-              role: p.rol === "ADMIN" ? "Administrador" : p.rol === "GERENTE" ? "Gerente" : "Vendedor",
-              email: p.email,
-              route: getRutaPorRol(p.rol),
-              background: colorPalette[idx % colorPalette.length].background,
-              textColor: colorPalette[idx % colorPalette.length].textColor,
-            }));
-            setProfilesList(formatted);
+            setProfilesList(remoteUsers.map(formatUser));
           }
         } catch {
-          // Si falla la red, mantenemos los perfiles en caché
+          // Si el servidor tarda o está iniciando en frío, la caché local ya está activa y utilizable
+        } finally {
+          setLoading(false);
         }
       } else if (!cached || cached.length === 0) {
         setProfilesList([]);
+        setLoading(false);
       }
-
-      setLoading(false);
     }
 
     loadProfiles();
@@ -148,7 +148,7 @@ export default function ProfileSelector({
 
         if (res.usuario) {
           setUsuarioActual(res.usuario);
-          const destination = getRutaPorRol(res.usuario.rol);
+          const destination = getRutaPorPerfil(res.usuario);
           router.push(destination);
           return;
         }

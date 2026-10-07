@@ -95,7 +95,7 @@ export default function Sidebar() {
         ) : (
           <div
             onClick={() => goTo("/inicio")}
-            className="mx-auto flex h-10 w-10 items-center justify-center border border-[#D8A814] font-bold text-[#D8A814] cursor-pointer"
+            className="mx-auto flex h-10 w-10 items-center justify-center border border-[var(--primary)] font-bold text-[var(--primary)] cursor-pointer"
           >
             C
           </div>
@@ -138,7 +138,7 @@ export default function Sidebar() {
               text-sm font-medium
               ${
                 pathname === "/inicio"
-                  ? "border-[#D8A814] bg-[#141414] text-[#D8A814]"
+                  ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
                   : "border-transparent text-[#C5C5C5] hover:text-white"
               }
             `}
@@ -161,7 +161,7 @@ export default function Sidebar() {
                 text-sm font-medium
                 ${
                   pathname.startsWith("/clientes")
-                    ? "border-[#D8A814] text-[#D8A814]"
+                    ? "border-[var(--primary)] text-[var(--primary)]"
                     : "border-transparent text-[#C5C5C5] hover:text-white"
                 }
               `}
@@ -183,7 +183,7 @@ export default function Sidebar() {
                 <button
                   onClick={() => goTo("/clientes")}
                   className={`block w-full py-2.5 text-left text-sm ${
-                    pathname === "/clientes" ? "font-semibold text-[#D8A814]" : "text-[#8F8F8F] hover:text-white"
+                    pathname === "/clientes" ? "font-semibold text-[var(--primary)]" : "text-[#8F8F8F] hover:text-white"
                   }`}
                 >
                   Todos los clientes
@@ -193,8 +193,8 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* Artículos */}
-        {canVer("articulos") && (
+        {/* Artículos (con submódulos de Productos, Stock, Familias y Unidades) */}
+        {(canVer("articulos") || canVer("stock")) && (
           <div className="mt-2">
             <button
               onClick={() => (collapsed ? goTo("/articulos") : setArticulosOpen(!articulosOpen))}
@@ -205,8 +205,8 @@ export default function Sidebar() {
                 ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
                 text-sm font-medium
                 ${
-                  pathname.startsWith("/articulos")
-                    ? "border-[#D8A814] text-[#D8A814]"
+                  pathname.startsWith("/articulos") || pathname.startsWith("/stock")
+                    ? "border-[var(--primary)] text-[var(--primary)]"
                     : "border-transparent text-[#C5C5C5] hover:text-white"
                 }
               `}
@@ -224,59 +224,41 @@ export default function Sidebar() {
             </button>
 
             {!collapsed && articulosOpen && (
-              <div className="ml-[27px] border-l border-[#2B2B2B] pl-5">
+              <div className="ml-[27px] border-l border-[#2B2B2B] pl-4 flex flex-col gap-1 my-1">
                 <button
                   onClick={() => goTo("/articulos")}
-                  className={`block w-full py-2.5 text-left text-sm ${
-                    pathname === "/articulos" ? "font-semibold text-[#D8A814]" : "text-[#8F8F8F] hover:text-white"
+                  className={`block w-full py-2 text-left text-xs transition-colors ${
+                    pathname === "/articulos" ? "font-bold text-[var(--primary)]" : "text-[#8F8F8F] hover:text-white"
                   }`}
                 >
-                  Todos los artículos
+                  Productos (Catálogo)
                 </button>
-              </div>
-            )}
-          </div>
-        )}
 
-        {/* Stock */}
-        {canVer("stock") && (
-          <div className="mt-2">
-            <button
-              onClick={() => (collapsed ? goTo("/stock") : setStockOpen(!stockOpen))}
-              title="Stock / Inventario"
-              className={`
-                flex h-12 w-full items-center
-                border-l-2 transition-colors
-                ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
-                text-sm font-medium
-                ${
-                  pathname.startsWith("/stock")
-                    ? "border-[#D8A814] text-[#D8A814]"
-                    : "border-transparent text-[#C5C5C5] hover:text-white"
-                }
-              `}
-            >
-              <Boxes size={18} strokeWidth={1.8} />
-              {!collapsed && (
-                <>
-                  <span className="flex-1">Stock</span>
-                  <ChevronDown
-                    size={15}
-                    className={`transition-transform duration-200 ${stockOpen ? "rotate-180" : ""}`}
-                  />
-                </>
-              )}
-            </button>
-
-            {!collapsed && stockOpen && (
-              <div className="ml-[27px] border-l border-[#2B2B2B] pl-5">
                 <button
                   onClick={() => goTo("/stock")}
-                  className={`block w-full py-2.5 text-left text-sm ${
-                    pathname === "/stock" ? "font-semibold text-[#D8A814]" : "text-[#8F8F8F] hover:text-white"
+                  className={`block w-full py-2 text-left text-xs transition-colors ${
+                    pathname.startsWith("/stock") ? "font-bold text-[var(--primary)]" : "text-[#8F8F8F] hover:text-white"
                   }`}
                 >
-                  Existencias
+                  Stock / Inventario
+                </button>
+
+                <button
+                  onClick={() => goTo("/articulos/familias")}
+                  className={`block w-full py-2 text-left text-xs transition-colors ${
+                    pathname.startsWith("/articulos/familias") ? "font-bold text-[var(--primary)]" : "text-[#8F8F8F] hover:text-white"
+                  }`}
+                >
+                  Familias y Subfamilias
+                </button>
+
+                <button
+                  onClick={() => goTo("/articulos/unidades")}
+                  className={`block w-full py-2 text-left text-xs transition-colors ${
+                    pathname.startsWith("/articulos/unidades") ? "font-bold text-[var(--primary)]" : "text-[#8F8F8F] hover:text-white"
+                  }`}
+                >
+                  Unidades de Medida
                 </button>
               </div>
             )}
@@ -295,7 +277,7 @@ export default function Sidebar() {
               text-sm font-medium
               ${
                 pathname.startsWith("/promociones")
-                  ? "border-[#D8A814] bg-[#141414] text-[#D8A814]"
+                  ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
                   : "border-transparent text-[#C5C5C5] hover:text-white"
               }
             `}
@@ -317,7 +299,7 @@ export default function Sidebar() {
               text-sm font-medium
               ${
                 pathname.startsWith("/usuarios")
-                  ? "border-[#D8A814] bg-[#141414] text-[#D8A814]"
+                  ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
                   : "border-transparent text-[#C5C5C5] hover:text-white"
               }
             `}
@@ -339,7 +321,7 @@ export default function Sidebar() {
               text-sm font-medium
               ${
                 pathname.startsWith("/configuracion")
-                  ? "border-[#D8A814] bg-[#141414] text-[#D8A814]"
+                  ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
                   : "border-transparent text-[#C5C5C5] hover:text-white"
               }
             `}
@@ -361,7 +343,7 @@ export default function Sidebar() {
               text-sm font-medium
               ${
                 pathname.startsWith("/suscripciones") || pathname.startsWith("/subscripciones")
-                  ? "border-[#D8A814] bg-[#141414] text-[#D8A814]"
+                  ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
                   : "border-transparent text-[#C5C5C5] hover:text-white"
               }
             `}
@@ -391,7 +373,7 @@ export default function Sidebar() {
                   text-sm font-medium
                   ${
                     pathname.startsWith("/ventas")
-                      ? "border-[#D8A814] bg-[#141414] text-[#D8A814]"
+                      ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
                       : "border-transparent text-[#C5C5C5] hover:text-white"
                   }
                 `}
@@ -412,7 +394,7 @@ export default function Sidebar() {
                   text-sm font-medium
                   ${
                     pathname.startsWith("/caja")
-                      ? "border-[#D8A814] bg-[#141414] text-[#D8A814]"
+                      ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
                       : "border-transparent text-[#C5C5C5] hover:text-white"
                   }
                 `}
@@ -433,7 +415,7 @@ export default function Sidebar() {
                   text-sm font-medium
                   ${
                     pathname.startsWith("/tickets")
-                      ? "border-[#D8A814] bg-[#141414] text-[#D8A814]"
+                      ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
                       : "border-transparent text-[#C5C5C5] hover:text-white"
                   }
                 `}
@@ -454,7 +436,7 @@ export default function Sidebar() {
                   text-sm font-medium
                   ${
                     pathname.startsWith("/reportes")
-                      ? "border-[#D8A814] bg-[#141414] text-[#D8A814]"
+                      ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
                       : "border-transparent text-[#C5C5C5] hover:text-white"
                   }
                 `}
@@ -471,14 +453,14 @@ export default function Sidebar() {
       <div className="shrink-0 border-t border-[#262626] bg-[#050505] p-4">
         <div className={`flex w-full items-center justify-between ${collapsed ? "flex-col gap-3" : ""}`}>
           <div className="flex items-center gap-3 min-w-0">
-            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-[#D8A814] font-bold text-white">
+            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-[var(--primary)] font-bold text-white">
               {(usuario?.nombre || "U").charAt(0).toUpperCase()}
             </div>
 
             {!collapsed && (
               <div className="min-w-0 text-left">
                 <p className="truncate text-sm font-semibold text-white">{usuario?.nombre || "Usuario"}</p>
-                <p className="text-xs text-[#D8A814] font-medium">{getNombrePerfil(usuario)}</p>
+                <p className="text-xs text-[var(--primary)] font-medium">{getNombrePerfil(usuario)}</p>
               </div>
             )}
           </div>

@@ -15,9 +15,13 @@ export function apiUrl(endpoint: string): string {
   return `${API_BASE_URL}${API_PREFIX}${cleanEndpoint}`;
 }
 
+export interface ApiRequestOptions extends RequestInit {
+  timeoutMs?: number;
+}
+
 export async function apiRequest<T = any>(
   endpoint: string,
-  options: RequestInit = {}
+  options: ApiRequestOptions = {}
 ): Promise<T> {
   const url = apiUrl(endpoint);
 
@@ -25,22 +29,41 @@ export async function apiRequest<T = any>(
     "Content-Type": "application/json",
   };
 
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      ...defaultHeaders,
-      ...options.headers,
-    },
-  });
+  const { timeoutMs, signal, ...fetchOptions } = options;
 
-  const data = await response.json().catch(() => ({}));
+  let controller: AbortController | undefined;
+  let timeoutId: NodeJS.Timeout | undefined;
 
-  if (!response.ok) {
-    const errorMsg = Array.isArray(data.message)
-      ? data.message.join(", ")
-      : data.message || `Error HTTP ${response.status}: ${response.statusText}`;
-    throw new Error(errorMsg);
+  if (timeoutMs && !signal) {
+    controller = new AbortController();
+    timeoutId = setTimeout(() => {
+      controller?.abort(new Error(`Timeout de petición (${timeoutMs}ms) en ${endpoint}`));
+    }, timeoutMs);
   }
 
-  return data as T;
+  try {
+    const response = await fetch(url, {
+      ...fetchOptions,
+      signal: signal || controller?.signal,
+      headers: {
+        ...defaultHeaders,
+        ...fetchOptions.headers,
+      },
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const errorMsg = Array.isArray(data.message)
+        ? data.message.join(", ")
+        : data.message || `Error HTTP ${response.status}: ${response.statusText}`;
+      throw new Error(errorMsg);
+    }
+
+    return data as T;
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
 }

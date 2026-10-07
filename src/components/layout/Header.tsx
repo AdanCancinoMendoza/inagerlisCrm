@@ -33,7 +33,7 @@ export default function Header() {
         <button
           onClick={toggleSidebar}
           title={collapsed ? "Desplegar menú" : "Ocultar menú"}
-          className="flex h-11 w-11 items-center justify-center border border-[#DDDDDD] bg-[#FAFAFA] text-black hover:border-[#D8A814] hover:bg-white transition-all shadow-sm cursor-pointer"
+          className="flex h-11 w-11 items-center justify-center border border-[#DDDDDD] bg-[#FAFAFA] text-black hover:border-[var(--primary)] hover:bg-white transition-all shadow-sm cursor-pointer"
         >
           {collapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
         </button>
@@ -66,12 +66,12 @@ export default function Header() {
             onClick={() => setUserMenuOpen(!userMenuOpen)}
             className="flex items-center gap-3 border border-[#E5E5E5] bg-[#FAFAFA] hover:bg-white p-2 px-3 transition-all cursor-pointer"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#D8A814] font-bold text-white text-sm">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--primary)] font-bold text-white text-sm">
               {inicial}
             </div>
             <div className="text-left hidden md:block">
               <p className="text-xs font-bold text-black leading-tight">{nombreUsuario}</p>
-              <p className="text-[10px] font-semibold text-[#D8A814]">{rolUsuario}</p>
+              <p className="text-[10px] font-semibold text-[var(--primary)]">{rolUsuario}</p>
             </div>
             <ChevronDown size={14} className={`text-[#777777] transition-transform ${userMenuOpen ? "rotate-180" : ""}`} />
           </button>
@@ -81,7 +81,7 @@ export default function Header() {
               <div className="p-3 border-b border-[#EEEEEE] bg-[#FAFAFA]">
                 <p className="text-xs font-bold text-black">{nombreUsuario}</p>
                 <p className="text-[11px] text-[#777777] truncate">{usuario?.email || "usuario@empresa.com"}</p>
-                <span className="mt-1.5 inline-block text-[9px] font-bold uppercase tracking-wider bg-[#D8A814] text-white px-2 py-0.5">
+                <span className="mt-1.5 inline-block text-[9px] font-bold uppercase tracking-wider bg-[var(--primary)] text-white px-2 py-0.5">
                   {rolUsuario}
                 </span>
               </div>
