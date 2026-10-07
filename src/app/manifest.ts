@@ -1,0 +1,60 @@
+import type { MetadataRoute } from "next";
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: "Inagerlis CRM & POS",
+    short_name: "Inagerlis",
+    description: "Sistema empresarial en la nube de Punto de Venta (POS) y CRM para comercios minoristas",
+    start_url: "/inicio",
+    scope: "/",
+    id: "/",
+    display: "standalone",
+    background_color: "#121212",
+    theme_color: "#D8A814",
+    orientation: "any",
+    categories: ["business", "finance", "productivity", "utilities"],
+    icons: [
+      {
+        src: "/icon-192x192.png",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/icon-512x512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/icon-maskable-512x512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "maskable",
+      },
+    ],
+    shortcuts: [
+      {
+        name: "Punto de Venta",
+        short_name: "POS",
+        description: "Terminal de cobro rápido",
+        url: "/pos",
+        icons: [{ src: "/icon-192x192.png", sizes: "192x192" }],
+      },
+      {
+        name: "Ventas",
+        short_name: "Ventas",
+        description: "Historial de tickets y ventas",
+        url: "/ventas",
+        icons: [{ src: "/icon-192x192.png", sizes: "192x192" }],
+      },
+      {
+        name: "Caja Registradora",
+        short_name: "Caja",
+        description: "Apertura y corte de caja",
+        url: "/caja",
+        icons: [{ src: "/icon-192x192.png", sizes: "192x192" }],
+      },
+    ],
+  };
+}

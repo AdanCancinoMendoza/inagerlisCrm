@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getNombrePerfil, getUsuarioActual } from "@/services/auth";
+import { usePwa } from "@/context/PwaContext";
 import {
   ChevronDown,
   Cpu,
+  Download,
   ReceiptText,
   Settings,
   ShoppingCart,
@@ -27,6 +29,7 @@ export default function POSHeader({
   onNuevaVenta,
 }: POSHeaderProps) {
   const router = useRouter();
+  const { isInstallable, isInstalled, installPwa } = usePwa();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [usuario, setUsuario] = useState<any>(null);
 
@@ -90,6 +93,18 @@ export default function POSHeader({
         </div>
 
         <div className="relative flex min-w-[250px] items-center justify-end">
+          {isInstallable && !isInstalled && (
+            <button
+              type="button"
+              onClick={installPwa}
+              title="Instalar App POS en tu navegador"
+              className="mr-3 flex items-center gap-1.5 rounded border border-[#D8A814] bg-[#D8A814]/15 px-3 py-1.5 text-xs font-bold text-[#D8A814] hover:bg-[#D8A814] hover:text-black transition-all cursor-pointer active:scale-95 shadow-sm"
+            >
+              <Download size={14} />
+              <span className="hidden sm:inline">Instalar App</span>
+            </button>
+          )}
+
           <div className="relative">
             <button
               type="button"

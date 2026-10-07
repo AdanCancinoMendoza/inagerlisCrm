@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSidebar } from "@/context/SidebarContext";
-import { PanelLeftClose, PanelLeftOpen, LogOut, ChevronDown, User } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, LogOut, ChevronDown, User, Download } from "lucide-react";
 import { getUsuarioActual, logout, UsuarioPerfil } from "@/services/auth";
+import { usePwa } from "@/context/PwaContext";
 
 export default function Header() {
   const router = useRouter();
   const { collapsed, toggleSidebar } = useSidebar();
+  const { isInstallable, isInstalled, installPwa } = usePwa();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [usuario, setUsuario] = useState<UsuarioPerfil | null>(null);
 
@@ -50,6 +52,17 @@ export default function Header() {
       </div>
 
       <div className="flex items-center gap-6">
+        {isInstallable && !isInstalled && (
+          <button
+            onClick={installPwa}
+            title="Instalar Inagerlis en tu navegador"
+            className="hidden sm:flex items-center gap-2 border border-[#D8A814] bg-[#FAF6E8] text-[#937107] hover:bg-[#D8A814] hover:text-black px-3.5 py-2 text-xs font-bold transition-all shadow-sm cursor-pointer active:scale-95"
+          >
+            <Download size={15} />
+            <span>Instalar App</span>
+          </button>
+        )}
+
         <div className="text-right hidden sm:block">
           <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#999999]">
             Organización

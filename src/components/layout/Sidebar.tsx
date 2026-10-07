@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSidebar } from "@/context/SidebarContext";
 import { getNombrePerfil } from "@/services/auth";
+import { usePwa } from "@/context/PwaContext";
 
 import {
   House,
@@ -23,12 +24,14 @@ import {
   PanelLeftOpen,
   CreditCard,
   LogOut,
+  Download,
 } from "lucide-react";
 
 export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const { collapsed, toggleSidebar } = useSidebar();
+  const { isInstallable, isInstalled, installPwa } = usePwa();
 
   const [clientesOpen, setClientesOpen] = useState(
     pathname.startsWith("/clientes")
@@ -445,6 +448,26 @@ export default function Sidebar() {
                 {!collapsed && <span>Reportes</span>}
               </button>
             )}
+          </div>
+        )}
+
+        {/* Botón Descargar / Instalar PWA */}
+        {isInstallable && !isInstalled && (
+          <div className="mt-6 pt-4 border-t border-[#222222]">
+            <button
+              onClick={installPwa}
+              title="Instalar Inagerlis en este equipo"
+              className={`
+                flex h-11 w-full items-center
+                border border-[#D8A814]/40 bg-[#D8A814]/10 text-[#D8A814]
+                hover:bg-[#D8A814] hover:text-black transition-all
+                ${collapsed ? "justify-center px-0" : "gap-3 px-3 text-left"}
+                text-xs font-bold cursor-pointer active:scale-95
+              `}
+            >
+              <Download size={16} />
+              {!collapsed && <span>Instalar Aplicación</span>}
+            </button>
           </div>
         )}
       </nav>
