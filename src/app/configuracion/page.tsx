@@ -1,75 +1,127 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import { COLOR_PALETTES, useTheme } from "@/context/ThemeContext";
 import { useSidebar } from "@/context/SidebarContext";
-import { Check } from "lucide-react";
+import { Check, Building2, Terminal as TerminalIcon, Plus, Loader2 } from "lucide-react";
 import SuscripcionesView from "@/components/suscripciones/SuscripcionesView";
-
-const branches = [
-  {
-    id: 1,
-    name: "Sucursal Centro",
-    city: "Puebla",
-    address: "Av. Reforma 120",
-    terminals: 3,
-    status: "Activa",
-  },
-  {
-    id: 2,
-    name: "Sucursal Cholula",
-    city: "San Pedro Cholula",
-    address: "5 Norte 340",
-    terminals: 2,
-    status: "Activa",
-  },
-  {
-    id: 3,
-    name: "Sucursal Tehuacán",
-    city: "Tehuacán",
-    address: "Av. Independencia 90",
-    terminals: 1,
-    status: "Inactiva",
-  },
-];
-
-const terminals = [
-  {
-    id: 1,
-    name: "Caja 01",
-    branch: "Sucursal Centro",
-    code: "TERM-001",
-    status: true,
-  },
-  {
-    id: 2,
-    name: "Caja 02",
-    branch: "Sucursal Centro",
-    code: "TERM-002",
-    status: true,
-  },
-  {
-    id: 3,
-    name: "Caja Principal",
-    branch: "Sucursal Cholula",
-    code: "TERM-003",
-    status: false,
-  },
-  {
-    id: 4,
-    name: "Caja 01",
-    branch: "Sucursal Tehuacán",
-    code: "TERM-004",
-    status: false,
-  },
-];
+import { apiRequest } from "@/services/api";
+import { getOrganizacionId, getUsuarioActual } from "@/services/auth";
 
 export default function ConfiguracionPage() {
   const { collapsed } = useSidebar();
   const { activePalette, setPalette } = useTheme();
   const [activeTab, setActiveTab] = useState("General");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Datos reales de la Organización
+  const [orgForm, setOrgForm] = useState({
+    nombre: "",
+    telefono: "",
+    email: "",
+    direccion: "",
+    rfc: "",
+    razonSocial: "",
+    codigoPostal: "",
+    regimenFiscal: "601",
+  });
+
+  // Datos reales de Sucursales y Terminales
+  const [branches, setBranches] = useState<any[]>([]);
+  const [terminals, setTerminals] = useState<any[]>([]);
+
+  // Preferencias
+  const [preferencias, setPreferencias] = useState({
+    ventasSinCliente: true,
+    solicitarCliente: false,
+    impuestosAuto: true,
+    bloquearTerminalesInactivas: true,
+  });
+
+  const loadData = useCallback(async () => {
+    const user = getUsuarioActual();
+    const orgId = getOrganizacionId() || user?.organizacionId;
+
+    if (!orgId) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const [orgRes, sucursalesRes, terminalesRes] = await Promise.allSettled([
+        apiRequest<any>(`/organizaciones/${orgId}`),
+        apiRequest<any[]>(`/sucursales?organizacionId=${orgId}`),
+        apiRequest<any[]>(`/terminales`),
+      ]);
+
+      if (orgRes.status === "fulfilled" && orgRes.value) {
+        const org = orgRes.value;
+        setOrgForm({
+          nombre: org.nombre || "",
+          telefono: org.telefono || "",
+          email: org.email || "",
+          direccion: org.direccion || "",
+          rfc: org.rfc || "",
+          razonSocial: org.nombre || "",
+          codigoPostal: "",
+          regimenFiscal: "601",
+        });
+      }
+
+      if (sucursalesRes.status === "fulfilled" && Array.isArray(sucursalesRes.value)) {
+        setBranches(sucursalesRes.value);
+      } else {
+        setBranches([]);
+      }
+
+      if (terminalesRes.status === "fulfilled" && Array.isArray(terminalesRes.value)) {
+        setTerminals(terminalesRes.value);
+      } else {
+        setTerminals([]);
+      }
+    } catch (err) {
+      console.error("Error al cargar configuración:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleSaveGeneral = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const user = getUsuarioActual();
+    const orgId = getOrganizacionId() || user?.organizacionId;
+    if (!orgId) return;
+
+    setSaving(true);
+    try {
+      await apiRequest(`/organizaciones/${orgId}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          nombre: orgForm.nombre,
+          telefono: orgForm.telefono,
+          email: orgForm.email,
+          direccion: orgForm.direccion,
+          rfc: orgForm.rfc,
+        }),
+      });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      console.error("Error al actualizar organización:", err);
+      alert("Error al guardar cambios de la organización.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const tabs = [
     "General",
@@ -99,8 +151,7 @@ export default function ConfiguracionPage() {
             </h1>
 
             <p className="mt-2 text-sm text-[#777777]">
-              Administra la información general, fiscal, sucursales y terminales
-              de tu organización.
+              Administra la información general, fiscal, sucursales y terminales de tu organización.
             </p>
           </div>
 
@@ -128,15 +179,23 @@ export default function ConfiguracionPage() {
 
           {/* GENERAL */}
           {activeTab === "General" && (
-            <section className="border border-[#E2E2E2] bg-white">
-              <div className="border-b border-[#E5E5E5] px-8 py-6">
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#D8A814]">
-                  Información
-                </p>
+            <form onSubmit={handleSaveGeneral} className="border border-[#E2E2E2] bg-white">
+              <div className="border-b border-[#E5E5E5] px-8 py-6 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#D8A814]">
+                    Información
+                  </p>
 
-                <h2 className="mt-1 text-xl font-bold text-black">
-                  Datos generales
-                </h2>
+                  <h2 className="mt-1 text-xl font-bold text-black">
+                    Datos generales
+                  </h2>
+                </div>
+
+                {saveSuccess && (
+                  <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 border border-emerald-200">
+                    ✓ Cambios guardados exitosamente
+                  </span>
+                )}
               </div>
 
               <div className="grid grid-cols-1 gap-8 p-8 xl:grid-cols-[220px_1fr]">
@@ -148,13 +207,9 @@ export default function ConfiguracionPage() {
 
                   <div className="flex h-40 w-40 items-center justify-center border border-[#D8A814] bg-[#FAFAFA]">
                     <span className="text-4xl font-bold text-[#D8A814]">
-                      LOGO
+                      {orgForm.nombre ? orgForm.nombre.slice(0, 3).toUpperCase() : "POS"}
                     </span>
                   </div>
-
-                  <button className="mt-4 h-11 w-40 border border-black text-sm font-bold text-black hover:bg-black hover:text-white">
-                    Cambiar logo
-                  </button>
                 </div>
 
                 {/* Campos */}
@@ -165,7 +220,9 @@ export default function ConfiguracionPage() {
                     </label>
 
                     <input
-                      defaultValue="Mi Tienda"
+                      value={orgForm.nombre}
+                      onChange={(e) => setOrgForm({ ...orgForm, nombre: e.target.value })}
+                      placeholder="Nombre de tu negocio o tienda"
                       className="h-12 w-full border border-[#D8A814] px-4 text-black outline-none focus:border-black"
                     />
                   </div>
@@ -176,7 +233,9 @@ export default function ConfiguracionPage() {
                     </label>
 
                     <input
-                      defaultValue="222 000 0000"
+                      value={orgForm.telefono}
+                      onChange={(e) => setOrgForm({ ...orgForm, telefono: e.target.value })}
+                      placeholder="Teléfono de contacto"
                       className="h-12 w-full border border-[#D8A814] px-4 text-black outline-none focus:border-black"
                     />
                   </div>
@@ -187,61 +246,23 @@ export default function ConfiguracionPage() {
                     </label>
 
                     <input
-                      defaultValue="contacto@mitienda.com"
-                      className="h-12 w-full border border-[#D8A814] px-4 text-black outline-none focus:border-black"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-bold text-black">
-                      País
-                    </label>
-
-                    <select className="h-12 w-full border border-[#D8A814] bg-white px-4 text-black outline-none">
-                      <option>México</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-bold text-black">
-                      Estado
-                    </label>
-
-                    <input
-                      defaultValue="Puebla"
-                      className="h-12 w-full border border-[#D8A814] px-4 text-black outline-none focus:border-black"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-bold text-black">
-                      Municipio / Localidad
-                    </label>
-
-                    <input
-                      defaultValue="Puebla"
-                      className="h-12 w-full border border-[#D8A814] px-4 text-black outline-none focus:border-black"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-bold text-black">
-                      Código postal
-                    </label>
-
-                    <input
-                      defaultValue="72000"
+                      type="email"
+                      value={orgForm.email}
+                      onChange={(e) => setOrgForm({ ...orgForm, email: e.target.value })}
+                      placeholder="correo@ejemplo.com"
                       className="h-12 w-full border border-[#D8A814] px-4 text-black outline-none focus:border-black"
                     />
                   </div>
 
                   <div className="md:col-span-2">
                     <label className="mb-2 block text-sm font-bold text-black">
-                      Dirección
+                      Dirección principal
                     </label>
 
                     <input
-                      defaultValue="Av. Reforma 120, Centro"
+                      value={orgForm.direccion}
+                      onChange={(e) => setOrgForm({ ...orgForm, direccion: e.target.value })}
+                      placeholder="Calle, número, colonia, ciudad"
                       className="h-12 w-full border border-[#D8A814] px-4 text-black outline-none focus:border-black"
                     />
                   </div>
@@ -249,16 +270,21 @@ export default function ConfiguracionPage() {
               </div>
 
               <div className="flex justify-end border-t border-[#E5E5E5] px-8 py-5">
-                <button className="h-12 bg-[#D8A814] px-7 font-bold text-white hover:bg-black">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex items-center gap-2 h-12 bg-[#D8A814] px-7 font-bold text-white hover:bg-black transition-colors disabled:opacity-50"
+                >
+                  {saving && <Loader2 size={16} className="animate-spin" />}
                   Guardar cambios
                 </button>
               </div>
-            </section>
+            </form>
           )}
 
           {/* FISCAL */}
           {activeTab === "Fiscal" && (
-            <section className="border border-[#E2E2E2] bg-white">
+            <form onSubmit={handleSaveGeneral} className="border border-[#E2E2E2] bg-white">
               <div className="border-b border-[#E5E5E5] px-8 py-6">
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#D8A814]">
                   Fiscal
@@ -276,7 +302,9 @@ export default function ConfiguracionPage() {
                   </label>
 
                   <input
-                    defaultValue="Mi Tienda Comercial S.A. de C.V."
+                    value={orgForm.razonSocial || orgForm.nombre}
+                    onChange={(e) => setOrgForm({ ...orgForm, razonSocial: e.target.value })}
+                    placeholder="Razón social registrada"
                     className="h-12 w-full border border-[#D8A814] px-4 text-black outline-none"
                   />
                 </div>
@@ -287,38 +315,17 @@ export default function ConfiguracionPage() {
                   </label>
 
                   <input
-                    defaultValue="MTC260101AB1"
+                    value={orgForm.rfc}
+                    onChange={(e) => setOrgForm({ ...orgForm, rfc: e.target.value })}
+                    placeholder="RFC de la empresa"
                     className="h-12 w-full border border-[#D8A814] px-4 uppercase text-black outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-bold text-black">
-                    Régimen fiscal
-                  </label>
-
-                  <select className="h-12 w-full border border-[#D8A814] bg-white px-4 text-black outline-none">
-                    <option>601 - General de Ley Personas Morales</option>
-                    <option>612 - Personas Físicas con Actividades Empresariales</option>
-                    <option>626 - Régimen Simplificado de Confianza</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-bold text-black">
-                    Código postal fiscal
-                  </label>
-
-                  <input
-                    defaultValue="72000"
-                    className="h-12 w-full border border-[#D8A814] px-4 text-black outline-none"
                   />
                 </div>
               </div>
 
               <div className="border-t border-[#E5E5E5] p-8">
                 <p className="text-sm font-bold text-black">
-                  Impuestos
+                  Impuestos configurados
                 </p>
 
                 <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -352,12 +359,19 @@ export default function ConfiguracionPage() {
                     </p>
                   </div>
                 </div>
+              </div>
 
-                <button className="mt-5 h-11 border border-black px-5 text-sm font-bold text-black hover:bg-black hover:text-white">
-                  + Agregar impuesto
+              <div className="flex justify-end border-t border-[#E5E5E5] px-8 py-5">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex items-center gap-2 h-12 bg-[#D8A814] px-7 font-bold text-white hover:bg-black transition-colors disabled:opacity-50"
+                >
+                  {saving && <Loader2 size={16} className="animate-spin" />}
+                  Guardar datos fiscales
                 </button>
               </div>
-            </section>
+            </form>
           )}
 
           {/* SUCURSALES */}
@@ -373,18 +387,11 @@ export default function ConfiguracionPage() {
                     Sucursales
                   </h2>
                 </div>
-
-                <button className="h-11 bg-[#D8A814] px-5 font-bold text-white hover:bg-black">
-                  + Nueva sucursal
-                </button>
               </div>
 
-              <div className="grid grid-cols-[1.5fr_1fr_1.5fr_.8fr_.8fr] bg-[#FAFAFA] px-6 py-4">
+              <div className="grid grid-cols-[1.5fr_1.5fr_.8fr_.8fr] bg-[#FAFAFA] px-6 py-4">
                 <span className="text-xs font-bold uppercase text-[#777777]">
                   Sucursal
-                </span>
-                <span className="text-xs font-bold uppercase text-[#777777]">
-                  Ciudad
                 </span>
                 <span className="text-xs font-bold uppercase text-[#777777]">
                   Dirección
@@ -397,40 +404,38 @@ export default function ConfiguracionPage() {
                 </span>
               </div>
 
-              {branches.map((branch) => (
-                <div
-                  key={branch.id}
-                  className="grid grid-cols-[1.5fr_1fr_1.5fr_.8fr_.8fr] items-center border-t border-[#EEEEEE] px-6 py-5"
-                >
-                  <p className="font-bold text-black">
-                    {branch.name}
-                  </p>
-
-                  <p className="text-sm text-[#555555]">
-                    {branch.city}
-                  </p>
-
-                  <p className="text-sm text-[#555555]">
-                    {branch.address}
-                  </p>
-
-                  <p className="text-center font-bold text-black">
-                    {branch.terminals}
-                  </p>
-
-                  <div className="text-right">
-                    <span
-                      className={`inline-block px-3 py-1 text-xs font-bold ${
-                        branch.status === "Activa"
-                          ? "bg-[#D8A814] text-white"
-                          : "bg-[#EEEEEE] text-[#666666]"
-                      }`}
-                    >
-                      {branch.status}
-                    </span>
-                  </div>
+              {branches.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-14 text-center">
+                  <Building2 size={38} className="text-[#CCCCCC]" />
+                  <p className="mt-3 text-sm font-bold text-black">No hay sucursales registradas</p>
+                  <p className="mt-1 text-xs text-[#777777]">Las sucursales asociadas a tu cuenta se sincronizarán aquí.</p>
                 </div>
-              ))}
+              ) : (
+                branches.map((branch) => (
+                  <div
+                    key={branch.id}
+                    className="grid grid-cols-[1.5fr_1.5fr_.8fr_.8fr] items-center border-t border-[#EEEEEE] px-6 py-5"
+                  >
+                    <p className="font-bold text-black">
+                      {branch.nombre || branch.name}
+                    </p>
+
+                    <p className="text-sm text-[#555555]">
+                      {branch.direccion || branch.address || "Principal"}
+                    </p>
+
+                    <p className="text-center font-bold text-black">
+                      {branch.terminales?.length || 1}
+                    </p>
+
+                    <div className="text-right">
+                      <span className="inline-block px-3 py-1 text-xs font-bold bg-[#D8A814] text-white">
+                        Activa
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
             </section>
           )}
 
@@ -444,87 +449,64 @@ export default function ConfiguracionPage() {
                   </p>
 
                   <h2 className="mt-1 text-xl font-bold text-black">
-                    Terminales
+                    Terminales de Cobro
                   </h2>
                 </div>
-
-                <button className="h-11 bg-[#D8A814] px-5 font-bold text-white hover:bg-black">
-                  + Nueva terminal
-                </button>
               </div>
 
               <div className="grid grid-cols-[1.4fr_1.5fr_1fr_1fr] bg-[#FAFAFA] px-6 py-4">
                 <span className="text-xs font-bold uppercase text-[#777777]">
                   Terminal
                 </span>
-
                 <span className="text-xs font-bold uppercase text-[#777777]">
                   Sucursal
                 </span>
-
                 <span className="text-xs font-bold uppercase text-[#777777]">
                   Código
                 </span>
-
                 <span className="text-right text-xs font-bold uppercase text-[#777777]">
                   Estado
                 </span>
               </div>
 
-              {terminals.map((terminal) => (
-                <div
-                  key={terminal.id}
-                  className="grid grid-cols-[1.4fr_1.5fr_1fr_1fr] items-center border-t border-[#EEEEEE] px-6 py-5"
-                >
-                  <p className="font-bold text-black">
-                    {terminal.name}
-                  </p>
-
-                  <p className="text-sm text-[#555555]">
-                    {terminal.branch}
-                  </p>
-
-                  <p className="text-sm font-semibold text-[#777777]">
-                    {terminal.code}
-                  </p>
-
-                  <div className="flex items-center justify-end gap-4">
-                    <span
-                      className={`text-xs font-bold ${
-                        terminal.status
-                          ? "text-[#D8A814]"
-                          : "text-[#888888]"
-                      }`}
-                    >
-                      {terminal.status ? "ACTIVA" : "INACTIVA"}
-                    </span>
-
-                    <button
-                      className={`
-                        relative h-7 w-12
-                        transition-colors
-                        ${
-                          terminal.status
-                            ? "bg-[#D8A814]"
-                            : "bg-[#CCCCCC]"
-                        }
-                      `}
-                    >
-                      <span
-                        className={`
-                          absolute top-1 h-5 w-5 bg-white
-                          transition-all
-                          ${
-                            terminal.status
-                              ? "left-6"
-                              : "left-1"
-                          }
-                        `}
-                      />
-                    </button>
-                  </div>
+              {terminals.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-14 text-center">
+                  <TerminalIcon size={38} className="text-[#CCCCCC]" />
+                  <p className="mt-3 text-sm font-bold text-black">No hay terminales registradas</p>
+                  <p className="mt-1 text-xs text-[#777777]">Las cajas de cobro POS asignadas aparecerán listadas aquí.</p>
                 </div>
-              ))}
+              ) : (
+                terminals.map((terminal) => (
+                  <div
+                    key={terminal.id}
+                    className="grid grid-cols-[1.4fr_1.5fr_1fr_1fr] items-center border-t border-[#EEEEEE] px-6 py-5"
+                  >
+                    <p className="font-bold text-black">
+                      {terminal.nombre || terminal.name}
+                    </p>
+
+                    <p className="text-sm text-[#555555]">
+                      {terminal.sucursal?.nombre || "Principal"}
+                    </p>
+
+                    <p className="text-sm font-semibold text-[#777777]">
+                      {terminal.codigo || `TERM-${terminal.id.slice(0, 4)}`}
+                    </p>
+
+                    <div className="flex items-center justify-end gap-4">
+                      <span
+                        className={`text-xs font-bold ${
+                          terminal.estado === "Abierta" || terminal.status
+                            ? "text-[#D8A814]"
+                            : "text-[#888888]"
+                        }`}
+                      >
+                        {terminal.estado === "Abierta" || terminal.status ? "ABIERTA" : "CERRADA"}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
             </section>
           )}
 
@@ -558,7 +540,6 @@ export default function ConfiguracionPage() {
                             : "border-[#EEEEEE] bg-[#FAFAFA] hover:border-[#CCCCCC] hover:bg-white"
                         }`}
                       >
-                        {/* Theme preview swatch */}
                         <div className="w-full rounded border border-[#E5E5E5] overflow-hidden mb-3">
                           <div
                             className="h-4 w-full flex items-center justify-end px-1"
@@ -591,66 +572,38 @@ export default function ConfiguracionPage() {
                   </p>
 
                   <h2 className="mt-1 text-xl font-bold text-black">
-                    Preferencias generales
+                    Preferencias de Operación
                   </h2>
                 </div>
 
                 <div className="divide-y divide-[#EEEEEE]">
-                  {[
-                    {
-                      title: "Permitir ventas sin cliente",
-                      description:
-                        "Permite realizar una venta sin asociarla a un cliente.",
-                    },
-                    {
-                      title: "Solicitar cliente en cada venta",
-                      description:
-                        "Solicita seleccionar o registrar un cliente antes de continuar.",
-                    },
-                    {
-                      title: "Aplicar impuestos automáticamente",
-                      description:
-                        "Usa los impuestos configurados en los artículos y servicios.",
-                    },
-                    {
-                      title: "Permitir terminales inactivas",
-                      description:
-                        "Impide el acceso al POS desde terminales desactivadas.",
-                    },
-                  ].map((item, index) => (
-                    <div
-                      key={item.title}
-                      className="flex items-center justify-between px-8 py-6"
-                    >
-                      <div>
-                        <p className="font-bold text-black">
-                          {item.title}
-                        </p>
-
-                        <p className="mt-1 text-sm text-[#777777]">
-                          {item.description}
-                        </p>
-                      </div>
-
-                      <button
-                        className={`
-                          relative h-7 w-12
-                          ${index !== 3 ? "bg-[#D8A814]" : "bg-[#CCCCCC]"}
-                        `}
-                      >
-                        <span
-                          className={`
-                            absolute top-1 h-5 w-5 bg-white
-                            ${
-                              index !== 3
-                                ? "left-6"
-                                : "left-1"
-                            }
-                          `}
-                        />
-                      </button>
+                  <div className="flex items-center justify-between px-8 py-6">
+                    <div>
+                      <p className="font-bold text-black">Permitir ventas a público en general sin registrar cliente</p>
+                      <p className="mt-1 text-sm text-[#777777]">Permite cobrar directamente en el POS sin obligar a seleccionar un cliente.</p>
                     </div>
-                  ))}
+                    <button
+                      type="button"
+                      onClick={() => setPreferencias({ ...preferencias, ventasSinCliente: !preferencias.ventasSinCliente })}
+                      className={`relative h-7 w-12 transition-colors ${preferencias.ventasSinCliente ? "bg-[#D8A814]" : "bg-[#CCCCCC]"}`}
+                    >
+                      <span className={`absolute top-1 h-5 w-5 bg-white transition-all ${preferencias.ventasSinCliente ? "left-6" : "left-1"}`} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between px-8 py-6">
+                    <div>
+                      <p className="font-bold text-black">Aplicar desglose de impuestos automáticamente</p>
+                      <p className="mt-1 text-sm text-[#777777]">Calcula IVA sobre el total de tickets y artículos en caja.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPreferencias({ ...preferencias, impuestosAuto: !preferencias.impuestosAuto })}
+                      className={`relative h-7 w-12 transition-colors ${preferencias.impuestosAuto ? "bg-[#D8A814]" : "bg-[#CCCCCC]"}`}
+                    >
+                      <span className={`absolute top-1 h-5 w-5 bg-white transition-all ${preferencias.impuestosAuto ? "left-6" : "left-1"}`} />
+                    </button>
+                  </div>
                 </div>
               </section>
             </div>

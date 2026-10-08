@@ -58,20 +58,13 @@ export interface LogEntry {
   recommendation?: string;
 }
 
-const initialLogs: LogEntry[] = [
+const getInitialLogs = (): LogEntry[] => [
   {
-    id: "log-101",
-    timestamp: "17:58:00.102",
+    id: "log-init",
+    timestamp: new Date().toLocaleTimeString("es-MX", { hour12: false }),
     level: "INFO",
     module: "POS_SYSTEM",
-    message: "Sistema Punto de Venta listo. Esperando vinculación real de dispositivos físicos de hardware.",
-  },
-  {
-    id: "log-104",
-    timestamp: "17:58:01.050",
-    level: "SOCKET",
-    module: "EVENTS_GATEWAY",
-    message: "Conexión WebSocket activa con backend NestJS (ws://localhost:3001/events).",
+    message: "Sistema Punto de Venta listo. Esperando vinculación de dispositivos físicos de hardware.",
   },
 ];
 
@@ -100,7 +93,7 @@ export default function POSHardwareConfigPage() {
 
   // Consola State
   const terminalEndRef = useRef<HTMLDivElement>(null);
-  const [logs, setLogs] = useState<LogEntry[]>(initialLogs);
+  const [logs, setLogs] = useState<LogEntry[]>(getInitialLogs);
   const [filterLevel, setFilterLevel] = useState<string>("ALL");
   const [consoleSearchQuery, setConsoleSearchQuery] = useState("");
   const [autoScroll, setAutoScroll] = useState(true);

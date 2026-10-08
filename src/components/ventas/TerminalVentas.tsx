@@ -61,75 +61,6 @@ interface TerminalVentasProps {
   onOpenFullscreen?: () => void;
 }
 
-const fallbackProducts: Product[] = [
-  {
-    id: "fb-1",
-    code: "750105530001",
-    name: "Coca-Cola Original 600 ml",
-    price: 18.5,
-    family: "Bebidas",
-    unit: "Pieza",
-    stock: 24,
-    stockMinimo: 5,
-    stockIlimitado: false,
-  },
-  {
-    id: "fb-2",
-    code: "750105530002",
-    name: "Pepsi Cola 600 ml",
-    price: 17.0,
-    family: "Bebidas",
-    unit: "Pieza",
-    stock: 18,
-    stockMinimo: 5,
-    stockIlimitado: false,
-  },
-  {
-    id: "fb-3",
-    code: "750047800030",
-    name: "Sabritas Original 105 g",
-    price: 16.5,
-    family: "Botanas",
-    unit: "Pieza",
-    stock: 12,
-    stockMinimo: 6,
-    stockIlimitado: false,
-  },
-  {
-    id: "fb-4",
-    code: "750105535531",
-    name: "Agua Mineral Ciel 1L",
-    price: 15.0,
-    family: "Bebidas",
-    unit: "Pieza",
-    stock: 30,
-    stockMinimo: 8,
-    stockIlimitado: false,
-  },
-  {
-    id: "fb-5",
-    code: "750100011122",
-    name: "Galletas Chokis 76 g",
-    price: 19.0,
-    family: "Abarrotes",
-    unit: "Pieza",
-    stock: 15,
-    stockMinimo: 5,
-    stockIlimitado: false,
-  },
-  {
-    id: "fb-6",
-    code: "SERV-001",
-    name: "Servicio de Recarga Telefónica",
-    price: 50.0,
-    family: "Servicios",
-    unit: "Servicio",
-    stock: 999,
-    stockMinimo: 0,
-    stockIlimitado: true,
-  },
-];
-
 export default function TerminalVentas({
   onVentaCompletada,
   onOpenFullscreen,
@@ -137,7 +68,7 @@ export default function TerminalVentas({
   const { socket } = useSocket();
 
   // Estados de Catálogo de Productos
-  const [products, setProducts] = useState<Product[]>(fallbackProducts);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedFamily, setSelectedFamily] = useState("Todos");

@@ -28,6 +28,9 @@ import Header from "@/components/layout/Header";
 import { useSocket } from "@/hooks/useSocket";
 import { useSidebar } from "@/context/SidebarContext";
 
+import { apiRequest } from "@/services/api";
+import { getOrganizacionId, getUsuarioActual } from "@/services/auth";
+
 interface MovimientoCaja {
   id: string;
   fecha: string;
@@ -40,12 +43,15 @@ interface MovimientoCaja {
 
 export default function CajaPage() {
   const { collapsed } = useSidebar();
-  const [cajaAbierta, setCajaAbierta] = useState(true);
-  const [fondoInicial, setFondoInicial] = useState(1500);
-  const [ventasEfectivo, setVentasEfectivo] = useState(4820);
-  const [ventasTarjeta, setVentasTarjeta] = useState(3250);
-  const [entradasEfectivo, setEntradasEfectivo] = useState(500);
-  const [retirosEfectivo, setRetirosEfectivo] = useState(300);
+  const usuarioActual = typeof window !== "undefined" ? getUsuarioActual() : null;
+  const orgId = typeof window !== "undefined" ? (getOrganizacionId() || usuarioActual?.organizacionId) : null;
+
+  const [cajaAbierta, setCajaAbierta] = useState(false);
+  const [fondoInicial, setFondoInicial] = useState(0);
+  const [ventasEfectivo, setVentasEfectivo] = useState(0);
+  const [ventasTarjeta, setVentasTarjeta] = useState(0);
+  const [entradasEfectivo, setEntradasEfectivo] = useState(0);
+  const [retirosEfectivo, setRetirosEfectivo] = useState(0);
 
   // Modales
   const [modalApertura, setModalApertura] = useState(false);
@@ -56,38 +62,27 @@ export default function CajaPage() {
   const [montoMovimiento, setMontoMovimiento] = useState("");
   const [conceptoMovimiento, setConceptoMovimiento] = useState("");
   const [conteoEfectivoFisico, setConteoEfectivoFisico] = useState("");
-  const [montoApertura, setMontoApertura] = useState("1500");
+  const [montoApertura, setMontoApertura] = useState("0");
   const [notificacion, setNotificacion] = useState<string | null>(null);
 
-  const [movimientos, setMovimientos] = useState<MovimientoCaja[]>([
-    {
-      id: "1",
-      fecha: "Hoy",
-      hora: "08:00 AM",
-      tipo: "APERTURA",
-      concepto: "Fondo inicial de caja",
-      monto: 1500,
-      usuario: "Adán Morales",
-    },
-    {
-      id: "2",
-      fecha: "Hoy",
-      hora: "10:15 AM",
-      tipo: "ENTRADA",
-      concepto: "Cambio adicional",
-      monto: 500,
-      usuario: "Adán Morales",
-    },
-    {
-      id: "3",
-      fecha: "Hoy",
-      hora: "11:30 AM",
-      tipo: "RETIRO",
-      concepto: "Pago a proveedor de panadería",
-      monto: 300,
-      usuario: "Adán Morales",
-    },
-  ]);
+  const [movimientos, setMovimientos] = useState<MovimientoCaja[]>([]);
+
+  useEffect(() => {
+    if (!orgId) return;
+
+    // Cargar ventas reales acumuladas hoy
+    apiRequest<any>(`/ventas/resumen/${orgId}`)
+      .then((res) => {
+        if (res) {
+          const metodos = Array.isArray(res.metodosPago) ? res.metodosPago : [];
+          const ef = metodos.find((m: any) => m.metodo?.toLowerCase().includes("efectivo"))?.monto || 0;
+          const tj = metodos.find((m: any) => m.metodo?.toLowerCase().includes("tarjeta"))?.monto || 0;
+          setVentasEfectivo(ef);
+          setVentasTarjeta(tj);
+        }
+      })
+      .catch(() => {});
+  }, [orgId]);
 
   const { socket } = useSocket();
 
@@ -149,7 +144,7 @@ export default function CajaPage() {
         tipo: "APERTURA",
         concepto: "Apertura de turno de caja",
         monto,
-        usuario: "Adán Morales",
+        usuario: usuarioActual?.nombre || "Cajero en turno",
       },
     ]);
   };
@@ -173,7 +168,7 @@ export default function CajaPage() {
         tipo: modalMovimiento as "ENTRADA" | "RETIRO",
         concepto: conceptoMovimiento || (modalMovimiento === "ENTRADA" ? "Entrada de dinero" : "Retiro de dinero"),
         monto: val,
-        usuario: "Adán Morales",
+        usuario: usuarioActual?.nombre || "Cajero en turno",
       },
       ...prev,
     ]);
@@ -197,7 +192,7 @@ export default function CajaPage() {
         tipo: "CIERRE",
         concepto: `Cierre de caja - Contado: ${money(contado)} (Dif: ${money(contado - totalEsperadoEfectivo)})`,
         monto: contado,
-        usuario: "Adán Morales",
+        usuario: usuarioActual?.nombre || "Cajero en turno",
       },
       ...prev,
     ]);
@@ -306,7 +301,7 @@ export default function CajaPage() {
 
             <div className="text-right">
               <p className="text-xs uppercase text-[#888888]">Responsable</p>
-              <p className="font-bold text-black">Adán Morales (Cajero)</p>
+              <p className="font-bold text-black">{usuarioActual?.nombre || "Cajero en turno"}</p>
             </div>
           </div>
 

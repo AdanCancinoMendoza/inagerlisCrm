@@ -1,35 +1,16 @@
-const followUps = [
-  {
-    id: 1,
-    title: "Llamar a Carlos Hernández",
-    description: "Seguimiento después de su compra",
-    time: "10:30 AM",
-    urgent: true,
-  },
-  {
-    id: 2,
-    title: "Cotización Empresa Nova",
-    description: "Confirmar propuesta enviada",
-    time: "12:00 PM",
-    urgent: false,
-  },
-  {
-    id: 3,
-    title: "Contactar a María López",
-    description: "Cliente sin compras desde hace 30 días",
-    time: "03:30 PM",
-    urgent: false,
-  },
-  {
-    id: 4,
-    title: "Seguimiento pedido especial",
-    description: "Confirmar disponibilidad de producto",
-    time: "05:00 PM",
-    urgent: false,
-  },
-];
+export interface FollowUpItem {
+  id: number | string;
+  title: string;
+  description: string;
+  time?: string;
+  urgent?: boolean;
+}
 
-export default function PendingFollowUps() {
+interface PendingFollowUpsProps {
+  followUps?: FollowUpItem[];
+}
+
+export default function PendingFollowUps({ followUps = [] }: PendingFollowUpsProps) {
   return (
     <section className="border border-[#E2E2E2] bg-white p-7">
       <div className="mb-7 flex items-start justify-between">
@@ -48,44 +29,60 @@ export default function PendingFollowUps() {
         </div>
       </div>
 
-      <div>
-        {followUps.map((item) => (
-          <div
-            key={item.id}
-            className="
-              flex items-start gap-4
-              border-b border-[#EEEEEE]
-              py-4
-              last:border-none
-            "
-          >
-            <div
-              className={`
-                mt-2 h-2.5 w-2.5 flex-none rounded-full
-                ${
-                  item.urgent
-                    ? "bg-[#D8A814]"
-                    : "bg-[#222222]"
-                }
-              `}
-            />
-
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-black">
-                {item.title}
-              </p>
-
-              <p className="mt-1 text-sm text-[#888888]">
-                {item.description}
-              </p>
-            </div>
-
-            <p className="whitespace-nowrap text-xs font-semibold text-[#777777]">
-              {item.time}
-            </p>
+      {followUps.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-10 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#FAFAFA] text-[#999999]">
+            ✓
           </div>
-        ))}
-      </div>
+          <p className="mt-3 text-sm font-semibold text-black">
+            Sin seguimientos pendientes
+          </p>
+          <p className="mt-1 text-xs text-[#888888]">
+            Todas las tareas y recordatorios de clientes están al día.
+          </p>
+        </div>
+      ) : (
+        <div>
+          {followUps.map((item) => (
+            <div
+              key={item.id}
+              className="
+                flex items-start gap-4
+                border-b border-[#EEEEEE]
+                py-4
+                last:border-none
+              "
+            >
+              <div
+                className={`
+                  mt-2 h-2.5 w-2.5 flex-none rounded-full
+                  ${
+                    item.urgent
+                      ? "bg-[#D8A814]"
+                      : "bg-[#222222]"
+                  }
+                `}
+              />
+
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-black">
+                  {item.title}
+                </p>
+
+                <p className="mt-1 text-sm text-[#888888]">
+                  {item.description}
+                </p>
+              </div>
+
+              {item.time && (
+                <p className="whitespace-nowrap text-xs font-semibold text-[#777777]">
+                  {item.time}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

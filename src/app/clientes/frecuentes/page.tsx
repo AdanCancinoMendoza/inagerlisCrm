@@ -1,54 +1,73 @@
 "use client";
 
+import { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import { useSidebar } from "@/context/SidebarContext";
-
-const frequentCustomers = [
-  {
-    id: 1,
-    initial: "A",
-    name: "Ana Martínez",
-    phone: "222 145 8976",
-    location: "Puebla",
-    purchases: 24,
-    spent: "$12,450",
-    lastPurchase: "28 Ago 2026",
-  },
-  {
-    id: 2,
-    initial: "C",
-    name: "Carlos Ramírez",
-    phone: "221 356 7821",
-    location: "Tehuacán",
-    purchases: 19,
-    spent: "$10,280",
-    lastPurchase: "30 Ago 2026",
-  },
-  {
-    id: 3,
-    initial: "P",
-    name: "Pedro Gómez",
-    phone: "222 780 1102",
-    location: "Puebla",
-    purchases: 16,
-    spent: "$8,750",
-    lastPurchase: "27 Ago 2026",
-  },
-  {
-    id: 4,
-    initial: "L",
-    name: "Laura Pérez",
-    phone: "249 224 0084",
-    location: "Tecamachalco",
-    purchases: 14,
-    spent: "$7,620",
-    lastPurchase: "26 Ago 2026",
-  },
-];
+import { Cliente, getClientes } from "@/services/clientes";
+import { getOrganizacionId, getUsuarioActual } from "@/services/auth";
+import { Users, Search, UserCheck } from "lucide-react";
 
 export default function ClientesFrecuentesPage() {
   const { collapsed } = useSidebar();
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [criterio, setCriterio] = useState<"frecuencia" | "gasto" | "puntos">("frecuencia");
+
+  useEffect(() => {
+    const user = getUsuarioActual();
+    const orgId = getOrganizacionId() || user?.organizacionId;
+
+    if (!orgId) {
+      setLoading(false);
+      return;
+    }
+
+    getClientes(orgId)
+      .then((data) => {
+        setClientes(data || []);
+      })
+      .catch((err) => {
+        console.error("Error al cargar clientes frecuentes:", err);
+        setClientes([]);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
+  // Filtrar clientes con actividad recurrente o compras
+  const filteredList = useMemo(() => {
+    const term = search.toLowerCase().trim();
+    let res = clientes.filter((c) => {
+      const match =
+        c.nombre.toLowerCase().includes(term) ||
+        (c.telefono && c.telefono.includes(term)) ||
+        (c.localidad && c.localidad.toLowerCase().includes(term));
+      return match;
+    });
+
+    if (criterio === "frecuencia") {
+      res.sort((a, b) => (b.comprasCount || 0) - (a.comprasCount || 0));
+    } else if (criterio === "gasto") {
+      res.sort((a, b) => (b.totalGastado || 0) - (a.totalGastado || 0));
+    } else if (criterio === "puntos") {
+      res.sort((a, b) => (b.puntos || 0) - (a.puntos || 0));
+    }
+
+    return res;
+  }, [clientes, search, criterio]);
+
+  const totalFrecuentes = filteredList.filter((c) => (c.comprasCount || 0) > 1 || (c.puntos || 0) > 0).length;
+  const totalCompras = filteredList.reduce((acc, c) => acc + (c.comprasCount || 0), 0);
+  const promedioCompras = totalFrecuentes > 0 ? (totalCompras / totalFrecuentes).toFixed(1) : "0";
+  const totalGastado = filteredList.reduce((acc, c) => acc + (c.totalGastado || 0), 0);
+  const gastoPromedio = totalFrecuentes > 0 ? totalGastado / totalFrecuentes : 0;
+
+  const money = (val: number) =>
+    `$${val.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
     <main className="min-h-screen bg-[#F7F7F7]">
@@ -68,7 +87,7 @@ export default function ClientesFrecuentesPage() {
             </h1>
 
             <p className="mt-2 text-sm text-[#777777]">
-              Identifica a los clientes con mayor frecuencia de compra.
+              Identifica a los clientes con mayor frecuencia de compra y lealtad en tu negocio.
             </p>
           </div>
 
@@ -79,7 +98,7 @@ export default function ClientesFrecuentesPage() {
               </p>
 
               <p className="mt-3 text-3xl font-bold">
-                74
+                {totalFrecuentes}
               </p>
             </div>
 
@@ -89,7 +108,7 @@ export default function ClientesFrecuentesPage() {
               </p>
 
               <p className="mt-3 text-3xl font-bold text-black">
-                12.8
+                {promedioCompras}
               </p>
             </div>
 
@@ -99,21 +118,30 @@ export default function ClientesFrecuentesPage() {
               </p>
 
               <p className="mt-3 text-3xl font-bold text-black">
-                $7,840
+                {money(gastoPromedio)}
               </p>
             </div>
           </div>
 
           <div className="mb-6 flex items-center gap-3">
-            <input
-              placeholder="Buscar cliente..."
-              className="h-12 flex-1 border border-[#E0E0E0] bg-white px-5 text-black outline-none focus:border-[#D8A814]"
-            />
+            <div className="relative flex-1">
+              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#999999]" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar cliente por nombre o teléfono..."
+                className="h-12 w-full border border-[#E0E0E0] bg-white pl-11 pr-5 text-black outline-none focus:border-[#D8A814]"
+              />
+            </div>
 
-            <select className="h-12 min-w-[210px] border border-[#E0E0E0] bg-white px-4 text-black outline-none">
-              <option>Mayor frecuencia</option>
-              <option>Mayor gasto</option>
-              <option>Compra más reciente</option>
+            <select
+              value={criterio}
+              onChange={(e) => setCriterio(e.target.value as any)}
+              className="h-12 min-w-[210px] border border-[#E0E0E0] bg-white px-4 text-black outline-none focus:border-[#D8A814]"
+            >
+              <option value="frecuencia">Mayor frecuencia</option>
+              <option value="gasto">Mayor gasto</option>
+              <option value="puntos">Mayor cantidad de puntos</option>
             </select>
           </div>
 
@@ -136,54 +164,76 @@ export default function ClientesFrecuentesPage() {
               </p>
 
               <p className="text-right text-xs font-bold uppercase tracking-wider text-[#777777]">
-                Última compra
+                Puntos
               </p>
             </div>
 
-            {frequentCustomers.map((customer, index) => (
-              <div
-                key={customer.id}
-                className="grid grid-cols-[2fr_1.2fr_1fr_1fr_1.2fr] items-center border-b border-[#EEEEEE] px-6 py-4 last:border-none"
-              >
-                <div className="flex items-center gap-4">
-                  <div
-                    className={`flex h-11 w-11 items-center justify-center rounded-full font-bold ${
-                      index === 0
-                        ? "bg-[#D8A814] text-white"
-                        : "bg-[#050505] text-white"
-                    }`}
-                  >
-                    {customer.initial}
-                  </div>
-
-                  <div>
-                    <p className="font-semibold text-black">
-                      {customer.name}
-                    </p>
-
-                    <p className="mt-1 text-xs text-[#999999]">
-                      {customer.phone}
-                    </p>
-                  </div>
-                </div>
-
-                <p className="text-sm text-[#555555]">
-                  {customer.location}
-                </p>
-
-                <p className="text-center text-lg font-bold text-black">
-                  {customer.purchases}
-                </p>
-
-                <p className="text-right font-bold text-[#D8A814]">
-                  {customer.spent}
-                </p>
-
-                <p className="text-right text-sm text-[#555555]">
-                  {customer.lastPurchase}
-                </p>
+            {loading ? (
+              <div className="py-12 text-center text-sm text-[#777777]">
+                Cargando clientes frecuentes...
               </div>
-            ))}
+            ) : filteredList.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <Users size={40} className="text-[#CCCCCC]" />
+                <p className="mt-3 text-base font-bold text-black">
+                  No hay clientes registrados aún
+                </p>
+                <p className="mt-1 text-xs text-[#777777]">
+                  Los clientes que registres y que realicen compras aparecerán aquí automáticamente.
+                </p>
+                <Link
+                  href="/clientes"
+                  className="mt-4 bg-[#D8A814] px-5 py-2.5 text-xs font-bold text-white hover:bg-black transition-colors"
+                >
+                  Ir al catálogo de clientes
+                </Link>
+              </div>
+            ) : (
+              filteredList.map((customer, index) => (
+                <div
+                  key={customer.id}
+                  className="grid grid-cols-[2fr_1.2fr_1fr_1fr_1.2fr] items-center border-b border-[#EEEEEE] px-6 py-4 last:border-none"
+                >
+                  <div className="flex items-center gap-4">
+                    <div
+                      className={`flex h-11 w-11 items-center justify-center rounded-full font-bold ${
+                        index === 0
+                          ? "bg-[#D8A814] text-white"
+                          : "bg-[#050505] text-white"
+                      }`}
+                    >
+                      {(customer.nombre || "C").charAt(0).toUpperCase()}
+                    </div>
+
+                    <div>
+                      <p className="font-semibold text-black">
+                        {customer.nombre}
+                      </p>
+
+                      <p className="mt-1 text-xs text-[#999999]">
+                        {customer.telefono || "Sin teléfono"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-[#555555]">
+                    {customer.localidad || "General"}
+                  </p>
+
+                  <p className="text-center text-lg font-bold text-black">
+                    {customer.comprasCount || 0}
+                  </p>
+
+                  <p className="text-right font-bold text-[#D8A814]">
+                    {money(customer.totalGastado || 0)}
+                  </p>
+
+                  <p className="text-right text-sm font-semibold text-[#555555]">
+                    {customer.puntos || 0} pts
+                  </p>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

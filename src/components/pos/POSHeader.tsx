@@ -25,7 +25,7 @@ interface POSHeaderProps {
 
 export default function POSHeader({
   activeTab,
-  ticketNumber = "#000129",
+  ticketNumber = "—",
   onNuevaVenta,
 }: POSHeaderProps) {
   const router = useRouter();
@@ -66,7 +66,7 @@ export default function POSHeader({
             <p className="text-[10px] uppercase tracking-wider text-[#777777]">
               Sucursal
             </p>
-            <p className="mt-1 text-sm font-semibold">{usuario?.sucursal?.nombre || "Centro"}</p>
+            <p className="mt-1 text-sm font-semibold">{usuario?.sucursal?.nombre || "Principal"}</p>
           </div>
 
           <div className="h-8 w-px bg-[var(--dark-border)]" />
@@ -75,7 +75,7 @@ export default function POSHeader({
             <p className="text-[10px] uppercase tracking-wider text-[#777777]">
               Terminal
             </p>
-            <p className="mt-1 text-sm font-semibold text-[#D8A814]">Caja 01</p>
+            <p className="mt-1 text-sm font-semibold text-[#D8A814]">{usuario?.terminal?.nombre || "Caja Principal"}</p>
           </div>
 
           <div className="h-8 w-px bg-[#262626]" />

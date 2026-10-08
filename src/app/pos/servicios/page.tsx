@@ -256,41 +256,17 @@ export default function ServiciosPOSPage() {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
 
   // History State
-  const [history, setHistory] = useState<ServiceTransaction[]>([
-    {
-      id: "1",
-      folio: "SERV-00412",
-      serviceName: "Megacable",
-      reference: "0481294812",
-      amount: 450,
-      commission: 12,
-      total: 462,
-      time: "10:15 AM",
-      status: "Exitosa",
-    },
-    {
-      id: "2",
-      folio: "SERV-00411",
-      serviceName: "Telcel Recarga",
-      reference: "2221458976",
-      amount: 100,
-      commission: 0,
-      total: 100,
-      time: "09:40 AM",
-      status: "Exitosa",
-    },
-    {
-      id: "3",
-      folio: "SERV-00410",
-      serviceName: "CFE Electricity",
-      reference: "09182371982739123019283019",
-      amount: 820,
-      commission: 12,
-      total: 832,
-      time: "Ayer 05:22 PM",
-      status: "Exitosa",
-    },
-  ]);
+  const [history, setHistory] = useState<ServiceTransaction[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("crm_pos_servicios_historial");
+        if (saved) return JSON.parse(saved);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
 
   const money = (val: number) =>
     `$${val.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -364,7 +340,13 @@ export default function ServiciosPOSPage() {
           time: new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }),
           status: "Exitosa",
         };
-        setHistory((prev) => [newTx, ...prev]);
+        setHistory((prev) => {
+          const updated = [newTx, ...prev];
+          if (typeof window !== "undefined") {
+            localStorage.setItem("crm_pos_servicios_historial", JSON.stringify(updated));
+          }
+          return updated;
+        });
       }
       setPaymentSuccess(false);
       setIsProcessingModal(false);
@@ -393,7 +375,7 @@ export default function ServiciosPOSPage() {
   return (
     <main className="min-h-screen bg-[#F7F7F7] text-black">
       {/* HEADER POS */}
-      <POSHeader activeTab="servicios" ticketNumber="#000129" />
+      <POSHeader activeTab="servicios" />
 
       {/* CONTENIDO PRINCIPAL */}
       <div className="grid h-[calc(100vh-136px)] grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] overflow-hidden">

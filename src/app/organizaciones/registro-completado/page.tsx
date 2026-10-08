@@ -25,13 +25,13 @@ type OrganizacionRegistro = {
 };
 
 const registroInicial: OrganizacionRegistro = {
-  nombre: "Abarrotes El Venado",
-  sucursalNombre: "Sucursal Centro",
-  sucursalDireccion: "Av. Juárez 100, Puebla",
-  adminNombre: "Carlos Martínez",
-  adminCorreo: "admin@elvenado.com",
-  vendedorNombre: "María López",
-  vendedorCorreo: "ventas@elvenado.com",
+  nombre: "Tu Organización",
+  sucursalNombre: "Sucursal Principal",
+  sucursalDireccion: "Matriz",
+  adminNombre: "Administrador",
+  adminCorreo: "",
+  vendedorNombre: "Cajero",
+  vendedorCorreo: "",
   plan: "BASICO",
   fechaFin: "",
 };

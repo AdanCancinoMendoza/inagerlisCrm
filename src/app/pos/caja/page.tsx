@@ -16,6 +16,9 @@ import {
   Zap,
 } from "lucide-react";
 
+import { apiRequest } from "@/services/api";
+import { getOrganizacionId, getUsuarioActual } from "@/services/auth";
+
 interface MovimientoPOS {
   id: string;
   hora: string;
@@ -25,12 +28,15 @@ interface MovimientoPOS {
 }
 
 export default function POSCajaPage() {
-  const [cajaAbierta, setCajaAbierta] = useState(true);
-  const [fondoInicial, setFondoInicial] = useState(1500);
-  const [ventasEfectivo, setVentasEfectivo] = useState(4820);
-  const [ventasTarjeta, setVentasTarjeta] = useState(3250);
-  const [entradas, setEntradas] = useState(500);
-  const [retiros, setRetiros] = useState(300);
+  const usuario = typeof window !== "undefined" ? getUsuarioActual() : null;
+  const orgId = typeof window !== "undefined" ? (getOrganizacionId() || usuario?.organizacionId) : null;
+
+  const [cajaAbierta, setCajaAbierta] = useState(false);
+  const [fondoInicial, setFondoInicial] = useState(0);
+  const [ventasEfectivo, setVentasEfectivo] = useState(0);
+  const [ventasTarjeta, setVentasTarjeta] = useState(0);
+  const [entradas, setEntradas] = useState(0);
+  const [retiros, setRetiros] = useState(0);
 
   const [modalApertura, setModalApertura] = useState(false);
   const [modalMovimiento, setModalMovimiento] = useState<"ENTRADA" | "RETIRO" | null>(null);
@@ -39,14 +45,26 @@ export default function POSCajaPage() {
   const [montoMov, setMontoMov] = useState("");
   const [conceptoMov, setConceptoMov] = useState("");
   const [conteoFisico, setConteoFisico] = useState("");
-  const [montoApertura, setMontoApertura] = useState("1500");
+  const [montoApertura, setMontoApertura] = useState("0");
   const [notificacion, setNotificacion] = useState<string | null>(null);
 
-  const [movimientos, setMovimientos] = useState<MovimientoPOS[]>([
-    { id: "1", hora: "08:00 AM", tipo: "APERTURA", concepto: "Fondo inicial de turno", monto: 1500 },
-    { id: "2", hora: "10:15 AM", tipo: "ENTRADA", concepto: "Cambio adicional", monto: 500 },
-    { id: "3", hora: "11:30 AM", tipo: "RETIRO", concepto: "Retiro parcial de efectivo", monto: 300 },
-  ]);
+  const [movimientos, setMovimientos] = useState<MovimientoPOS[]>([]);
+
+  useEffect(() => {
+    if (!orgId) return;
+
+    apiRequest<any>(`/ventas/resumen/${orgId}`)
+      .then((res) => {
+        if (res) {
+          const metodos = Array.isArray(res.metodosPago) ? res.metodosPago : [];
+          const ef = metodos.find((m: any) => m.metodo?.toLowerCase().includes("efectivo"))?.monto || 0;
+          const tj = metodos.find((m: any) => m.metodo?.toLowerCase().includes("tarjeta"))?.monto || 0;
+          setVentasEfectivo(ef);
+          setVentasTarjeta(tj);
+        }
+      })
+      .catch(() => {});
+  }, [orgId]);
 
   const { socket } = useSocket();
 

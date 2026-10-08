@@ -42,56 +42,9 @@ interface Invoice {
   method: string;
 }
 
-const INITIAL_PAYMENT_METHODS: PaymentMethod[] = [
-  {
-    id: "card-1",
-    brand: "visa",
-    last4: "4242",
-    expMonth: "12",
-    expYear: "28",
-    holderName: "ADAN MORALES",
-    isDefault: true,
-  },
-  {
-    id: "card-2",
-    brand: "mastercard",
-    last4: "8819",
-    expMonth: "08",
-    expYear: "27",
-    holderName: "ADAN MORALES",
-    isDefault: false,
-  },
-];
+const INITIAL_PAYMENT_METHODS: PaymentMethod[] = [];
 
-const INVOICES_DATA: Invoice[] = [
-  {
-    id: "inv-001",
-    number: "FACT-2026-009",
-    date: "15 Oct 2026",
-    plan: "Plan Pro Empresarial (Anual)",
-    amount: "$9,588.00 MXN",
-    status: "Pagado",
-    method: "Visa •••• 4242",
-  },
-  {
-    id: "inv-002",
-    number: "FACT-2025-009",
-    date: "15 Oct 2025",
-    plan: "Plan Pro Empresarial (Anual)",
-    amount: "$9,588.00 MXN",
-    status: "Pagado",
-    method: "Visa •••• 4242",
-  },
-  {
-    id: "inv-003",
-    number: "FACT-2024-009",
-    date: "15 Oct 2024",
-    plan: "Plan Básico Emprendedor (Mensual)",
-    amount: "$499.00 MXN",
-    status: "Pagado",
-    method: "Mastercard •••• 8819",
-  },
-];
+const INVOICES_DATA: Invoice[] = [];
 
 export default function SuscripcionesView() {
   const [activeTab, setActiveTab] = useState<
@@ -338,8 +291,9 @@ export default function SuscripcionesView() {
                     <p className="text-xs uppercase text-[#888888]">Método de pago asociado</p>
                     <p className="text-sm font-semibold text-white mt-0.5 flex items-center gap-1.5">
                       <CreditCard size={14} className="text-[#D8A814]" />
-                      {paymentMethods.find((p) => p.isDefault)?.brand.toUpperCase() || "VISA"} ••••{" "}
-                      {paymentMethods.find((p) => p.isDefault)?.last4 || "4242"}
+                      {paymentMethods.length > 0 && paymentMethods.find((p) => p.isDefault)
+                        ? `${paymentMethods.find((p) => p.isDefault)?.brand.toUpperCase()} •••• ${paymentMethods.find((p) => p.isDefault)?.last4}`
+                        : "Sin tarjeta vinculada"}
                     </p>
                   </div>
                 </div>
@@ -624,65 +578,81 @@ export default function SuscripcionesView() {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {paymentMethods.map((method) => (
-              <div
-                key={method.id}
-                className={`relative border p-6 bg-white transition-all ${
-                  method.isDefault
-                    ? "border-[#D8A814] ring-2 ring-[#D8A814]/20 shadow-md"
-                    : "border-[#E2E2E2] hover:border-[#CCCCCC]"
-                }`}
+          {paymentMethods.length === 0 ? (
+            <div className="flex flex-col items-center justify-center border border-[#E2E2E2] bg-white py-16 text-center">
+              <CreditCard size={44} className="text-[#CCCCCC]" />
+              <p className="mt-4 text-base font-bold text-black">No hay tarjetas registradas</p>
+              <p className="mt-1 text-xs text-[#777777]">
+                Agrega una tarjeta de débito o crédito para automatizar tus pagos de suscripción.
+              </p>
+              <button
+                onClick={() => setIsAddCardOpen(true)}
+                className="mt-5 bg-[#D8A814] px-5 py-2.5 text-xs font-bold text-black hover:bg-black hover:text-white transition-all"
               >
-                {method.isDefault && (
-                  <div className="absolute top-4 right-4 bg-[#D8A814] text-black text-[10px] font-extrabold uppercase px-2.5 py-1 tracking-wider">
-                    Predeterminada
-                  </div>
-                )}
-
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="flex h-12 w-16 items-center justify-center border border-[#E0E0E0] bg-[#FAFAFA] text-lg font-extrabold text-black">
-                    {method.brand === "visa" && <span className="text-blue-800 font-serif italic">VISA</span>}
-                    {method.brand === "mastercard" && <span className="text-orange-600 font-sans">MC</span>}
-                    {method.brand === "amex" && <span className="text-cyan-700 font-mono">AMEX</span>}
-                  </div>
-
-                  <div>
-                    <p className="font-bold text-black">•••• •••• •••• {method.last4}</p>
-                    <p className="text-xs text-[#777777]">Expira: {method.expMonth}/{method.expYear}</p>
-                  </div>
-                </div>
-
-                <div className="border-t border-[#EEEEEE] pt-4 mb-4">
-                  <p className="text-xs uppercase text-[#888888]">Titular de la tarjeta</p>
-                  <p className="text-sm font-semibold text-black">{method.holderName}</p>
-                </div>
-
-                <div className="flex items-center justify-between gap-2 border-t border-[#EEEEEE] pt-4">
-                  {!method.isDefault ? (
-                    <button
-                      onClick={() => handleSetDefaultCard(method.id)}
-                      className="text-xs font-bold text-[#D8A814] hover:text-black hover:underline"
-                    >
-                      Establecer predeterminada
-                    </button>
-                  ) : (
-                    <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
-                      <Check size={14} /> Usada para renovaciones
-                    </span>
+                + Agregar primera tarjeta
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {paymentMethods.map((method) => (
+                <div
+                  key={method.id}
+                  className={`relative border p-6 bg-white transition-all ${
+                    method.isDefault
+                      ? "border-[#D8A814] ring-2 ring-[#D8A814]/20 shadow-md"
+                      : "border-[#E2E2E2] hover:border-[#CCCCCC]"
+                  }`}
+                >
+                  {method.isDefault && (
+                    <div className="absolute top-4 right-4 bg-[#D8A814] text-black text-[10px] font-extrabold uppercase px-2.5 py-1 tracking-wider">
+                      Predeterminada
+                    </div>
                   )}
 
-                  <button
-                    onClick={() => handleDeleteCard(method.id)}
-                    className="text-[#999999] hover:text-red-600 transition-colors p-1"
-                    title="Eliminar tarjeta"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="flex h-12 w-16 items-center justify-center border border-[#E0E0E0] bg-[#FAFAFA] text-lg font-extrabold text-black">
+                      {method.brand === "visa" && <span className="text-blue-800 font-serif italic">VISA</span>}
+                      {method.brand === "mastercard" && <span className="text-orange-600 font-sans">MC</span>}
+                      {method.brand === "amex" && <span className="text-cyan-700 font-mono">AMEX</span>}
+                    </div>
+
+                    <div>
+                      <p className="font-bold text-black">•••• •••• •••• {method.last4}</p>
+                      <p className="text-xs text-[#777777]">Expira: {method.expMonth}/{method.expYear}</p>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-[#EEEEEE] pt-4 mb-4">
+                    <p className="text-xs uppercase text-[#888888]">Titular de la tarjeta</p>
+                    <p className="text-sm font-semibold text-black">{method.holderName}</p>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 border-t border-[#EEEEEE] pt-4">
+                    {!method.isDefault ? (
+                      <button
+                        onClick={() => handleSetDefaultCard(method.id)}
+                        className="text-xs font-bold text-[#D8A814] hover:text-black hover:underline"
+                      >
+                        Establecer predeterminada
+                      </button>
+                    ) : (
+                      <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
+                        <Check size={14} /> Usada para renovaciones
+                      </span>
+                    )}
+
+                    <button
+                      onClick={() => handleDeleteCard(method.id)}
+                      className="text-[#999999] hover:text-red-600 transition-colors p-1"
+                      title="Eliminar tarjeta"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           <div className="flex items-center gap-4 border border-[#E5E5E5] bg-[#FAFAFA] p-6 text-sm text-[#666666]">
             <Lock size={24} className="text-[#D8A814] shrink-0" />
@@ -733,31 +703,41 @@ export default function SuscripcionesView() {
               </thead>
 
               <tbody className="divide-y divide-[#EEEEEE]">
-                {INVOICES_DATA.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-[#FAFAFA] transition-colors">
-                    <td className="px-6 py-4 font-bold text-black flex items-center gap-2">
-                      <FileText size={16} className="text-[#D8A814]" />
-                      {inv.number}
-                    </td>
-                    <td className="px-6 py-4 text-[#555555]">{inv.date}</td>
-                    <td className="px-6 py-4 font-semibold text-black">{inv.plan}</td>
-                    <td className="px-6 py-4 text-[#666666]">{inv.method}</td>
-                    <td className="px-6 py-4 font-bold text-black">{inv.amount}</td>
-                    <td className="px-6 py-4">
-                      <span className="inline-block px-3 py-1 text-xs font-bold bg-emerald-100 text-emerald-800 rounded-full">
-                        {inv.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => showToast(`Descargando factura ${inv.number}.pdf...`)}
-                        className="inline-flex items-center gap-1.5 border border-[#DDD] hover:border-black px-3 py-1.5 text-xs font-bold text-black bg-white hover:bg-black hover:text-white transition-all"
-                      >
-                        <Download size={14} /> PDF / XML
-                      </button>
+                {INVOICES_DATA.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-sm text-[#777777]">
+                      <FileText size={36} className="mx-auto mb-2 text-[#CCCCCC]" />
+                      <p className="font-bold text-black">No hay facturas emitidas aún</p>
+                      <p className="text-xs text-[#888888] mt-1">Los recibos de pagos aparecerán aquí tras cada corte.</p>
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  INVOICES_DATA.map((inv) => (
+                    <tr key={inv.id} className="hover:bg-[#FAFAFA] transition-colors">
+                      <td className="px-6 py-4 font-bold text-black flex items-center gap-2">
+                        <FileText size={16} className="text-[#D8A814]" />
+                        {inv.number}
+                      </td>
+                      <td className="px-6 py-4 text-[#555555]">{inv.date}</td>
+                      <td className="px-6 py-4 font-semibold text-black">{inv.plan}</td>
+                      <td className="px-6 py-4 text-[#666666]">{inv.method}</td>
+                      <td className="px-6 py-4 font-bold text-black">{inv.amount}</td>
+                      <td className="px-6 py-4">
+                        <span className="inline-block px-3 py-1 text-xs font-bold bg-emerald-100 text-emerald-800 rounded-full">
+                          {inv.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={() => showToast(`Descargando factura ${inv.number}.pdf...`)}
+                          className="inline-flex items-center gap-1.5 border border-[#DDD] hover:border-black px-3 py-1.5 text-xs font-bold text-black bg-white hover:bg-black hover:text-white transition-all"
+                        >
+                          <Download size={14} /> PDF / XML
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -815,7 +795,7 @@ export default function SuscripcionesView() {
                 </label>
                 <input
                   type="text"
-                  placeholder="Ej. ADAN MORALES"
+                  placeholder="NOMBRE DEL TITULAR"
                   value={newCard.holderName}
                   onChange={(e) => setNewCard({ ...newCard, holderName: e.target.value })}
                   required

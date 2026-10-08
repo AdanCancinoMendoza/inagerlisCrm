@@ -53,52 +53,6 @@ interface Ticket {
   items: TicketItem[];
 }
 
-const fallbackTickets: Ticket[] = [
-  {
-    id: "demo-1",
-    folio: "T-000128",
-    date: "30 Ago 2026",
-    rawDate: "2026-08-30",
-    time: "10:42 AM",
-    customer: "Ana Martínez",
-    phone: "222 145 8976",
-    seller: "María López",
-    branch: "Sucursal Centro",
-    terminal: "Caja 02",
-    payment: "Tarjeta",
-    subtotal: 108.62,
-    tax: 17.38,
-    total: 126,
-    status: "Pagado",
-    items: [
-      { name: "Coca-Cola 600 ml", quantity: 2, price: 18 },
-      { name: "Sabritas Original 105 g", quantity: 3, price: 15 },
-      { name: "Agua Ciel 1L", quantity: 2, price: 14 },
-      { name: "Galletas Emperador", quantity: 1, price: 17 },
-    ],
-  },
-  {
-    id: "demo-2",
-    folio: "T-000127",
-    date: "30 Ago 2026",
-    rawDate: "2026-08-30",
-    time: "10:18 AM",
-    customer: "Público general",
-    seller: "José Ramírez",
-    branch: "Sucursal Centro",
-    terminal: "Caja 01",
-    payment: "Efectivo",
-    subtotal: 211.21,
-    tax: 33.79,
-    total: 245,
-    status: "Pagado",
-    items: [
-      { name: "Coca-Cola 2L", quantity: 2, price: 38 },
-      { name: "Sabritas Original", quantity: 4, price: 15 },
-    ],
-  },
-];
-
 export default function TicketsPage() {
   const { collapsed } = useSidebar();
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -173,7 +127,7 @@ export default function TicketsPage() {
 
   const fetchTickets = useCallback(async () => {
     if (!orgId) {
-      setTickets(fallbackTickets);
+      setTickets([]);
       setLoading(false);
       return;
     }
@@ -196,16 +150,14 @@ export default function TicketsPage() {
       }
 
       const remoteData = await apiRequest<any[]>(`/tickets?${query.toString()}`);
-      if (Array.isArray(remoteData) && remoteData.length > 0) {
+      if (Array.isArray(remoteData)) {
         setTickets(remoteData.map(mapVentaToTicket));
-      } else if (Array.isArray(remoteData) && remoteData.length === 0) {
+      } else {
         setTickets([]);
       }
     } catch (err) {
-      console.warn("No se pudieron cargar tickets remotos, usando fallback:", err);
-      if (tickets.length === 0) {
-        setTickets(fallbackTickets);
-      }
+      console.warn("No se pudieron cargar tickets:", err);
+      setTickets([]);
     } finally {
       setLoading(false);
     }

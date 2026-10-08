@@ -48,69 +48,6 @@ type CartItem = Product & {
   quantity: number;
 };
 
-const fallbackProducts: Product[] = [
-  {
-    id: 1,
-    code: "750105530001",
-    name: "Coca-Cola 600 ml",
-    price: 18,
-    family: "Bebidas",
-    stock: 25,
-    stockMinimo: 5,
-    stockIlimitado: false,
-  },
-  {
-    id: 2,
-    code: "750105530002",
-    name: "Pepsi 600 ml",
-    price: 17,
-    family: "Bebidas",
-    stock: 15,
-    stockMinimo: 5,
-    stockIlimitado: false,
-  },
-  {
-    id: 3,
-    code: "750047800030",
-    name: "Sabritas Original 105 g",
-    price: 15,
-    family: "Botanas",
-    stock: 8,
-    stockMinimo: 10,
-    stockIlimitado: false,
-  },
-  {
-    id: 4,
-    code: "750105535531",
-    name: "Agua Ciel 1L",
-    price: 14,
-    family: "Bebidas",
-    stock: 30,
-    stockMinimo: 5,
-    stockIlimitado: false,
-  },
-  {
-    id: 5,
-    code: "ART-005",
-    name: "Galletas Emperador",
-    price: 17,
-    family: "Abarrotes",
-    stock: 0,
-    stockMinimo: 5,
-    stockIlimitado: false,
-  },
-  {
-    id: 6,
-    code: "ART-006",
-    name: "Servicio Express",
-    price: 50,
-    family: "Servicios",
-    stock: 0,
-    stockMinimo: 0,
-    stockIlimitado: true,
-  },
-];
-
 export default function VentasPage() {
   const router = useRouter();
   const searchRef = useRef<HTMLInputElement>(null);
@@ -119,7 +56,7 @@ export default function VentasPage() {
   const room = orgId ? `org_${orgId}` : undefined;
   const { socket } = useSocket(room);
 
-  const [products, setProducts] = useState<Product[]>(fallbackProducts);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [selectedFamily, setSelectedFamily] = useState<string>("Todos");
   const [search, setSearch] = useState("");
@@ -617,85 +554,106 @@ export default function VentasPage() {
 
           {/* Grid de Productos Adaptativo */}
           <div className="flex-1 overflow-y-auto pr-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-[#D1D5DB]">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 pb-4">
-              {filteredProducts.map((product) => {
-                const isOutOfStock = !product.stockIlimitado && product.stock <= 0;
-                const isLowStock = !product.stockIlimitado && product.stock > 0 && product.stock <= product.stockMinimo;
+            {loadingProducts ? (
+              <div className="flex flex-col items-center justify-center p-16 text-center">
+                <Package size={36} className="animate-bounce text-[var(--primary)] mb-2" />
+                <p className="text-xs font-bold text-gray-600">Cargando catálogo de artículos...</p>
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-[#DDD] bg-white rounded-xl">
+                <Package size={40} className="text-[#BBB] mb-3" />
+                <p className="font-bold text-black text-sm">No hay artículos disponibles</p>
+                <p className="text-xs text-[#777] mt-1 max-w-sm">
+                  No se encontraron artículos registrados para esta organización o filtro de búsqueda.
+                </p>
+                <button
+                  onClick={() => router.push("/articulos")}
+                  className="mt-4 px-4 py-2 bg-black text-white text-xs font-bold hover:bg-[var(--primary)] transition-colors rounded"
+                >
+                  Registrar artículos en catálogo
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 pb-4">
+                {filteredProducts.map((product) => {
+                  const isOutOfStock = !product.stockIlimitado && product.stock <= 0;
+                  const isLowStock = !product.stockIlimitado && product.stock > 0 && product.stock <= product.stockMinimo;
 
-                return (
-                  <button
-                    key={product.id}
-                    onClick={() => addProduct(product)}
-                    className={`group relative flex flex-col justify-between rounded-xl border p-3.5 text-left shadow-xs transition-all ${
-                      isOutOfStock
-                        ? "border-red-200 bg-red-50/20 opacity-75 hover:border-red-400 cursor-not-allowed"
-                        : "border-[#E5E7EB] bg-white hover:border-[var(--primary)] hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
-                    }`}
-                  >
-                    {/* Header de Tarjeta / Imagen y Badges */}
-                    <div className="flex items-start justify-between gap-1">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--primary-light)] text-[var(--primary)] group-hover:scale-105 transition-transform overflow-hidden border border-[#EEEEEE]">
-                        {product.image ? (
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            className="h-full w-full object-contain p-0.5"
-                            onError={(e) => {
-                              (e.target as HTMLElement).style.display = "none";
-                            }}
-                          />
+                  return (
+                    <button
+                      key={product.id}
+                      onClick={() => addProduct(product)}
+                      className={`group relative flex flex-col justify-between rounded-xl border p-3.5 text-left shadow-xs transition-all ${
+                        isOutOfStock
+                          ? "border-red-200 bg-red-50/20 opacity-75 hover:border-red-400 cursor-not-allowed"
+                          : "border-[#E5E7EB] bg-white hover:border-[var(--primary)] hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
+                      }`}
+                    >
+                      {/* Header de Tarjeta / Imagen y Badges */}
+                      <div className="flex items-start justify-between gap-1">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--primary-light)] text-[var(--primary)] group-hover:scale-105 transition-transform overflow-hidden border border-[#EEEEEE]">
+                          {product.image ? (
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="h-full w-full object-contain p-0.5"
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = "none";
+                              }}
+                            />
+                          ) : (
+                            <Package size={18} />
+                          )}
+                        </div>
+
+                        {product.stockIlimitado ? (
+                          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[9px] font-extrabold bg-purple-50 text-purple-700 border border-purple-200">
+                            ♾️ Ilimitado
+                          </span>
+                        ) : isOutOfStock ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-extrabold bg-red-100 text-red-700 border border-red-300">
+                            AGOTADO
+                          </span>
+                        ) : isLowStock ? (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300">
+                            ⚠️ {product.stock} disp.
+                          </span>
                         ) : (
-                          <Package size={18} />
-                        )}
-                      </div>
-
-                      {product.stockIlimitado ? (
-                        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[9px] font-extrabold bg-purple-50 text-purple-700 border border-purple-200">
-                          ♾️ Ilimitado
-                        </span>
-                      ) : isOutOfStock ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-extrabold bg-red-100 text-red-700 border border-red-300">
-                          AGOTADO
-                        </span>
-                      ) : isLowStock ? (
-                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300">
-                          ⚠️ {product.stock} disp.
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold text-gray-500 bg-gray-100">
-                          {product.stock} disp.
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="mt-2.5">
-                      <p className="line-clamp-2 text-xs font-bold text-[#111827] leading-tight">
-                        {product.name}
-                      </p>
-                      <div className="mt-1 flex items-center justify-between text-[10px]">
-                        <span className="font-medium text-[#9CA3AF] truncate">
-                          {product.family}
-                        </span>
-                        {isLowStock && (
-                          <span className="font-bold text-amber-700 text-[9px]">
-                            ¡Stock bajo!
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold text-gray-500 bg-gray-100">
+                            {product.stock} disp.
                           </span>
                         )}
                       </div>
-                    </div>
 
-                    <div className="mt-2.5 border-t border-[#F3F4F6] pt-2 flex items-center justify-between">
-                      <span className="text-[10px] text-[#6B7280] font-mono">
-                        {product.code}
-                      </span>
-                      <span className="text-sm font-bold text-[var(--primary)] font-mono">
-                        {money(product.price)}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                      <div className="mt-2.5">
+                        <p className="line-clamp-2 text-xs font-bold text-[#111827] leading-tight">
+                          {product.name}
+                        </p>
+                        <div className="mt-1 flex items-center justify-between text-[10px]">
+                          <span className="font-medium text-[#9CA3AF] truncate">
+                            {product.family}
+                          </span>
+                          {isLowStock && (
+                            <span className="font-bold text-amber-700 text-[9px]">
+                              ¡Stock bajo!
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="mt-2.5 border-t border-[#F3F4F6] pt-2 flex items-center justify-between">
+                        <span className="text-[10px] text-[#6B7280] font-mono">
+                          {product.code}
+                        </span>
+                        <span className="text-sm font-bold text-[var(--primary)] font-mono">
+                          {money(product.price)}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </section>
 

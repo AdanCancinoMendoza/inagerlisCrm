@@ -35,38 +35,8 @@ interface TicketPOS {
   items: TicketItem[];
 }
 
-const initialTickets: TicketPOS[] = [
-  {
-    id: "pos-demo-1",
-    folio: "T-000128",
-    hora: "10:42 AM",
-    cliente: "Ana Martínez",
-    metodo: "Tarjeta",
-    total: 126,
-    estado: "Pagado",
-    items: [
-      { name: "Coca-Cola 600 ml", quantity: 2, price: 18 },
-      { name: "Sabritas Original 105 g", quantity: 3, price: 15 },
-      { name: "Agua Ciel 1L", quantity: 2, price: 14 },
-    ],
-  },
-  {
-    id: "pos-demo-2",
-    folio: "T-000127",
-    hora: "10:18 AM",
-    cliente: "Público general",
-    metodo: "Efectivo",
-    total: 245,
-    estado: "Pagado",
-    items: [
-      { name: "Coca-Cola 2L", quantity: 2, price: 38 },
-      { name: "Sabritas Original", quantity: 4, price: 15 },
-    ],
-  },
-];
-
 export default function POSTicketsPage() {
-  const [tickets, setTickets] = useState<TicketPOS[]>(initialTickets);
+  const [tickets, setTickets] = useState<TicketPOS[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTicket, setSelectedTicket] = useState<TicketPOS | null>(null);
   const [search, setSearch] = useState("");
@@ -114,13 +84,13 @@ export default function POSTicketsPage() {
     try {
       setLoading(true);
       const data = await apiRequest<any[]>(`/tickets?organizacionId=${orgId}`);
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         setTickets(data.map(mapVentaToPOSTicket));
-      } else if (Array.isArray(data) && data.length === 0) {
+      } else {
         setTickets([]);
       }
     } catch {
-      // Si falla llamada de red, conserva iniciales
+      setTickets([]);
     } finally {
       setLoading(false);
     }
