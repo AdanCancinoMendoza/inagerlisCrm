@@ -187,23 +187,30 @@ export default function PromocionesPage() {
   const [enviandoCampana, setEnviandoCampana] = useState(false);
 
   // Conexión Socket para eventos en tiempo real
-  const orgIdStored = typeof window !== "undefined" ? getOrganizacionId() : "";
+  const orgIdStored = typeof window !== "undefined" ? (getOrganizacionId() || orgData?.id || "") : "";
   const { socket } = useSocket(orgIdStored ? `org_${orgIdStored}` : "");
 
   /* =========================================================
      CARGA DE DATOS & ESTADO DE WHATSAPP
   ========================================================= */
-  const cargarEstadoWhatsapp = async (orgId?: string | null) => {
+  const cargarEstadoWhatsapp = async (orgIdParam?: string | null) => {
     try {
-      const res = await apiRequest<any>(`/whatsapp/estado/${orgId || "default"}`);
+      const orgId = orgIdParam || getOrganizacionId() || orgData?.id || "default";
+      const res = await apiRequest<any>(`/whatsapp/estado/${orgId}`);
       setWhatsappEstado(res.estado);
-      if (res.qrCode) setQrCodeUrl(res.qrCode);
+      if (res.qrCode) {
+        setQrCodeUrl(res.qrCode);
+      } else if (res.estado === "CONECTADO") {
+        setQrCodeUrl(null);
+      }
       if (res.info) setInfoConexion(res.info);
       if (res.numeroGuardado && orgData && !orgData.whatsapp) {
         setOrgData((prev) => (prev ? { ...prev, whatsapp: res.numeroGuardado } : prev));
       }
+      return res.estado;
     } catch (err) {
       console.warn("No se pudo obtener estado de WhatsApp:", err);
+      return whatsappEstado;
     }
   };
 
@@ -271,6 +278,17 @@ export default function PromocionesPage() {
   useEffect(() => {
     cargarDatos();
   }, []);
+
+  // Sondeo automático (polling) cada 2 segundos mientras el modal QR esté activo para sincronizar en vivo
+  useEffect(() => {
+    if (!modalWhatsappOpen || whatsappEstado === "CONECTADO") return;
+
+    const interval = setInterval(() => {
+      cargarEstadoWhatsapp();
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [modalWhatsappOpen, whatsappEstado]);
 
   // Escucha de Eventos WebSocket en Tiempo Real
   useEffect(() => {
@@ -475,7 +493,9 @@ export default function PromocionesPage() {
   ========================================================= */
   const handleAbrirModalWhatsapp = async () => {
     setModalWhatsappOpen(true);
-    if (whatsappEstado !== "CONECTADO") {
+    // Verificar primero con el servidor si ya está conectado
+    const estadoReal = await cargarEstadoWhatsapp();
+    if (estadoReal !== "CONECTADO") {
       iniciarGeneracionQR();
     }
   };
@@ -489,7 +509,11 @@ export default function PromocionesPage() {
         body: JSON.stringify({ organizacionId: orgId }),
       });
       setWhatsappEstado(res.estado);
-      if (res.qrCode) setQrCodeUrl(res.qrCode);
+      if (res.qrCode) {
+        setQrCodeUrl(res.qrCode);
+      } else if (res.estado === "CONECTADO") {
+        setQrCodeUrl(null);
+      }
       if (res.info) setInfoConexion(res.info);
     } catch (err) {
       console.error("Error al solicitar QR de WhatsApp:", err);
@@ -651,15 +675,15 @@ export default function PromocionesPage() {
                 className="text-xs font-bold uppercase tracking-[0.18em]"
                 style={{ color: "var(--primary)" }}
               >
-                CRM
+                CRM & MARKETING
               </p>
 
               <h1 className="mt-1 text-3xl font-extrabold text-black">
-                Promociones
+                Campañas
               </h1>
 
               <p className="mt-1.5 max-w-2xl text-xs sm:text-sm text-[#777777]">
-                Envía promociones, ofertas de productos y recordatorios masivos en automático
+                Envía campañas, ofertas de productos y recordatorios masivos en automático
                 directamente al WhatsApp de tus clientes.
               </p>
             </div>
@@ -800,6 +824,17 @@ export default function PromocionesPage() {
               </div>
 
               <div className="flex items-center gap-2">
+                {whatsappEstado === "CONECTADO" && (
+                  <button
+                    type="button"
+                    onClick={handleAbrirModalWhatsapp}
+                    className="h-11 px-4 text-xs font-bold uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white transition-colors cursor-pointer shadow-2xs flex items-center gap-2"
+                  >
+                    <Send size={15} />
+                    <span>Probar Envío</span>
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={handleAbrirModalWhatsapp}
@@ -812,7 +847,7 @@ export default function PromocionesPage() {
                   <QrCode size={16} />
                   <span>
                     {whatsappEstado === "CONECTADO"
-                      ? "Administrar Conexión QR"
+                      ? "Administrar Conexión"
                       : "Vincular Celular con Código QR"}
                   </span>
                 </button>
@@ -1738,15 +1773,23 @@ export default function PromocionesPage() {
             {/* Header */}
             <div className="flex items-center justify-between border-b border-[#EEEEEE] px-6 py-4 bg-[#FAFAFA]">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center bg-emerald-600 text-white rounded-lg shadow-2xs">
-                  <QrCode size={20} />
+                <div
+                  className={`flex h-10 w-10 items-center justify-center text-white rounded-lg shadow-2xs ${
+                    whatsappEstado === "CONECTADO" ? "bg-emerald-600" : "bg-black"
+                  }`}
+                >
+                  {whatsappEstado === "CONECTADO" ? <CheckCircle2 size={20} /> : <QrCode size={20} />}
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-black">
-                    Conectar WhatsApp Oficial por QR
+                    {whatsappEstado === "CONECTADO"
+                      ? "WhatsApp Conectado y Activo"
+                      : "Conectar WhatsApp Oficial por QR"}
                   </h3>
                   <p className="text-xs text-[#777777]">
-                    Permite enviar mensajes automáticos masivos en segundo plano
+                    {whatsappEstado === "CONECTADO"
+                      ? "Envío de campañas y mensajes de prueba disponible"
+                      : "Permite enviar mensajes automáticos masivos en segundo plano"}
                   </p>
                 </div>
               </div>
@@ -1866,10 +1909,15 @@ export default function PromocionesPage() {
                             className="w-64 h-64 object-contain"
                           />
                         </div>
-                        <p className="text-[11px] font-semibold text-emerald-700 animate-pulse flex items-center gap-1.5">
-                          <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                          <span>Código QR activo · Esperando escaneo...</span>
-                        </p>
+                        <div className="flex flex-col items-center gap-1">
+                          <p className="text-[11px] font-semibold text-emerald-700 animate-pulse flex items-center gap-1.5">
+                            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                            <span>Código QR activo · Esperando escaneo...</span>
+                          </p>
+                          <p className="text-[10px] text-gray-500 font-medium">
+                            Se detectará y activará automáticamente al escanear con tu celular
+                          </p>
+                        </div>
                       </div>
                     ) : (
                       <div className="h-64 flex flex-col items-center justify-center gap-3">

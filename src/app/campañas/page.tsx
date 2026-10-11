@@ -1,5 +1,1 @@
-import { redirect } from "next/navigation";
-
-export default function CampanasAliasPage() {
-  redirect("/promociones");
-}
+export { default } from "../promociones/page";

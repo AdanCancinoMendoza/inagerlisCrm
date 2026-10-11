@@ -13,6 +13,7 @@ import {
   Package,
   Boxes,
   Tags,
+  Megaphone,
   Settings,
   ShoppingCart,
   ChartNoAxesCombined,
@@ -291,25 +292,25 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* Promociones */}
-        {canVer("promociones") && (
+        {/* Campañas */}
+        {(canVer("promociones") || canVer("campañas")) && (
           <button
             onClick={() => goTo("/promociones")}
-            title="Promociones"
+            title="Campañas"
             className={`
               mt-2 flex h-12 w-full items-center
               border-l-2 transition-colors
               ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
               text-sm font-medium
               ${
-                pathname.startsWith("/promociones")
+                pathname.startsWith("/promociones") || pathname.startsWith("/campañas")
                   ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
                   : "border-transparent text-[#C5C5C5] hover:text-white"
               }
             `}
           >
-            <Tags size={18} strokeWidth={1.8} />
-            {!collapsed && <span>Promociones</span>}
+            <Megaphone size={18} strokeWidth={1.8} />
+            {!collapsed && <span>Campañas</span>}
           </button>
         )}
 

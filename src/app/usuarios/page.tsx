@@ -58,7 +58,7 @@ const MODULOS_DISPONIBLES = [
   { key: "clientes", label: "Clientes", hasCrud: true },
   { key: "articulos", label: "Artículos y Catálogo", hasCrud: true },
   { key: "stock", label: "Stock / Inventario", hasCrud: true },
-  { key: "promociones", label: "Promociones", hasCrud: true },
+  { key: "promociones", label: "Campañas", hasCrud: true },
   { key: "ventas", label: "Ventas y Mostrador", hasCrud: true },
   { key: "caja", label: "Caja Registradora", hasCrud: false, customActions: [{ key: "abrir", label: "Abrir caja" }, { key: "cerrar", label: "Cerrar caja" }] },
   { key: "tickets", label: "Historial de Tickets", hasCrud: false, customActions: [{ key: "reimprimir", label: "Reimprimir" }, { key: "cancelar", label: "Cancelar ticket" }] },
