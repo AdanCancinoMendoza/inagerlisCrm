@@ -61,7 +61,14 @@ export function logout(): void {
 
 export function getOrganizacionId(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("crm_organizacion_id");
+  const stored = localStorage.getItem("crm_organizacion_id");
+  if (stored) return stored;
+  const usuario = getUsuarioActual();
+  if (usuario?.organizacionId) {
+    localStorage.setItem("crm_organizacion_id", usuario.organizacionId);
+    return usuario.organizacionId;
+  }
+  return null;
 }
 
 export function getOrganizacionNombre(): string | null {
