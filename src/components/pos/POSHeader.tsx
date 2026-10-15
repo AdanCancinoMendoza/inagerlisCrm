@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getNombrePerfil, getUsuarioActual } from "@/services/auth";
+import { getNombrePerfil, getUsuarioActual, isCajero, hasModuloPermiso } from "@/services/auth";
 import { usePwa } from "@/context/PwaContext";
 import {
   ChevronDown,
@@ -150,7 +150,7 @@ export default function POSHeader({
                 <p className="mt-1 text-right text-xs text-[#D8A814]">{nombrePerfil}</p>
               </div>
 
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#D8A814] font-bold">
+              <div className="flex h-10 w-10 items-center justify-center border border-[#D8A814] bg-[#050505] text-[#D8A814] font-bold">
                 {inicial}
               </div>
 
@@ -162,14 +162,16 @@ export default function POSHeader({
 
             {profileMenuOpen && (
               <div className="absolute right-0 top-full z-20 mt-3 w-52 border border-[#E5E5E5] bg-white shadow-lg">
-                <button
-                  type="button"
-                  onClick={() => router.push("/inicio")}
-                  className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-black hover:bg-[#F5F5F5]"
-                >
-                  <span>Ir al CRM</span>
-                  <span className="text-[#777777]">›</span>
-                </button>
+                {!isCajero(usuario) && hasModuloPermiso("inicio", "ver") && (
+                  <button
+                    type="button"
+                    onClick={() => router.push("/inicio")}
+                    className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-black hover:bg-[#F5F5F5]"
+                  >
+                    <span>Ir al CRM</span>
+                    <span className="text-[#777777]">›</span>
+                  </button>
+                )}
 
                 <button
                   type="button"

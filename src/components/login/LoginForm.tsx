@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ArrowRight, Loader2, Lock, Mail, UserPlus } from "lucide-react";
 import { apiRequest } from "@/services/api";
-import { getRutaPorRol, getUsuarioActual, setUsuarioActual, UsuarioPerfil } from "@/services/auth";
+import { getRutaPorPerfil, getRutaPorRol, getUsuarioActual, setUsuarioActual, UsuarioPerfil } from "@/services/auth";
 
 export default function LoginForm({
   initialEmail = "",
@@ -49,7 +49,7 @@ export default function LoginForm({
 
       if (res.usuario) {
         setUsuarioActual(res.usuario);
-        const destination = getRutaPorRol(res.usuario.rol);
+        const destination = getRutaPorPerfil(res.usuario);
         router.push(destination);
       } else {
         throw new Error("Respuesta inválida del servidor");

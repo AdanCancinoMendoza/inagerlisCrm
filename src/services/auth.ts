@@ -171,3 +171,69 @@ export function getRutaPorRol(rol?: string): string {
   }
   return "/inicio";
 }
+
+/**
+ * Indica si el usuario tiene rol o perfil de Cajero/a exclusivo de Punto de Venta
+ */
+export function isCajero(usuario?: UsuarioPerfil | null): boolean {
+  const u = usuario || getUsuarioActual();
+  if (!u) return false;
+  if (u.perfil?.esAdmin || u.rol === "ADMIN") return false;
+
+  const nombre = getNombrePerfil(u).toLowerCase();
+  const rol = (u.rol || "").toLowerCase();
+  if (nombre.includes("cajer") || rol.includes("cajer")) return true;
+
+  // Si tiene acceso al POS pero no a inicio ni a reportes ni a configuración
+  const modulos = u.perfil?.permisos?.modulos;
+  const tienePos = u.perfil?.permisos?.pos?.acceso;
+  if (tienePos && modulos && !modulos.inicio?.ver && !modulos.reportes?.ver && !modulos.configuracion?.ver) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Valida si el usuario actual tiene autorización para navegar a una ruta específica
+ */
+export function canAccessRoute(pathname: string, usuario?: UsuarioPerfil | null): boolean {
+  const u = usuario || getUsuarioActual();
+  if (!u) return false;
+
+  // Los administradores tienen acceso irrestricto
+  if (u.perfil?.esAdmin || u.rol === "ADMIN") return true;
+
+  // Rutas POS permitidas para cajeros y operadores
+  const esRutaPos =
+    pathname.startsWith("/pos") ||
+    pathname.startsWith("/ventas") ||
+    pathname.startsWith("/tickets");
+
+  if (isCajero(u)) {
+    // Un cajero/a SOLO tiene acceso al Punto de Venta, no al CRM
+    return esRutaPos;
+  }
+
+  // Si no es cajero pero no es admin, validar granularmente por módulo
+  if (pathname.startsWith("/inicio")) return hasModuloPermiso("inicio", "ver");
+  if (pathname.startsWith("/clientes")) return hasModuloPermiso("clientes", "ver");
+  if (pathname.startsWith("/articulos")) return hasModuloPermiso("articulos", "ver");
+  if (pathname.startsWith("/stock")) return hasModuloPermiso("stock", "ver");
+  if (pathname.startsWith("/promociones") || pathname.startsWith("/campañas")) return hasModuloPermiso("promociones", "ver");
+  if (pathname.startsWith("/calendario")) return hasModuloPermiso("calendario", "ver");
+  if (pathname.startsWith("/reportes") || pathname.startsWith("/analiticas")) return hasModuloPermiso("reportes", "ver");
+  if (pathname.startsWith("/usuarios")) return hasModuloPermiso("usuarios", "ver");
+  if (
+    pathname.startsWith("/configuracion") ||
+    pathname.startsWith("/organizacion") ||
+    pathname.startsWith("/mi-organizacion") ||
+    pathname.startsWith("/suscripciones") ||
+    pathname.startsWith("/subscripciones")
+  ) {
+    return hasModuloPermiso("configuracion", "ver");
+  }
+
+  return true;
+}
+
