@@ -435,7 +435,7 @@ export default function AnaliticasPage() {
 
       <div
         className={`min-h-screen transition-all duration-300 ${
-          collapsed ? "ml-0 md:ml-[80px]" : "ml-0 md:ml-[250px]"
+          collapsed ? "ml-0 lg:ml-[80px]" : "ml-0 lg:ml-[250px]"
         }`}
       >
         <Header />
@@ -448,7 +448,7 @@ export default function AnaliticasPage() {
           </div>
         )}
 
-        <div className="p-4 sm:p-6 lg:p-10 space-y-6">
+        <div className="p-4 sm:p-6 lg:p-8 space-y-6">
           {/* Header de la Vista */}
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between border-b border-[#E5E5E5] pb-6">
             <div>

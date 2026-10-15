@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSidebar } from "@/context/SidebarContext";
-import { PanelLeftClose, PanelLeftOpen, LogOut, ChevronDown, User, Download } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, LogOut, ChevronDown, User, Download, Menu } from "lucide-react";
 import { getUsuarioActual, logout, UsuarioPerfil } from "@/services/auth";
 import { usePwa } from "@/context/PwaContext";
 
 export default function Header() {
   const router = useRouter();
-  const { collapsed, toggleSidebar } = useSidebar();
+  const { collapsed, toggleSidebar, toggleMobileSidebar } = useSidebar();
   const { isInstallable, isInstalled, installPwa } = usePwa();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [usuario, setUsuario] = useState<UsuarioPerfil | null>(null);
@@ -30,22 +30,32 @@ export default function Header() {
   const inicial = nombreUsuario.charAt(0).toUpperCase();
 
   return (
-    <header className="flex h-24 items-center justify-between border-b border-[#E5E5E5] dark:border-[#262626] bg-white dark:bg-[#111111] px-10 transition-colors">
-      <div className="flex items-center gap-4">
+    <header className="flex h-16 sm:h-20 lg:h-24 items-center justify-between border-b border-[#E5E5E5] dark:border-[#262626] bg-white dark:bg-[#111111] px-4 sm:px-6 lg:px-10 transition-colors">
+      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+        {/* Botón hamburguesa Mobile */}
+        <button
+          onClick={toggleMobileSidebar}
+          title="Abrir menú"
+          className="flex lg:hidden h-10 w-10 shrink-0 items-center justify-center border border-[#DDDDDD] dark:border-[#333333] bg-[#FAFAFA] dark:bg-[#1A1A1A] text-black dark:text-white hover:border-[var(--primary)] transition-all shadow-xs cursor-pointer active:scale-95"
+        >
+          <Menu size={20} />
+        </button>
+
+        {/* Botón colapsar menú Desktop */}
         <button
           onClick={toggleSidebar}
           title={collapsed ? "Desplegar menú" : "Ocultar menú"}
-          className="flex h-11 w-11 items-center justify-center border border-[#DDDDDD] dark:border-[#333333] bg-[#FAFAFA] dark:bg-[#1A1A1A] text-black dark:text-white hover:border-[var(--primary)] transition-all shadow-sm cursor-pointer"
+          className="hidden lg:flex h-11 w-11 shrink-0 items-center justify-center border border-[#DDDDDD] dark:border-[#333333] bg-[#FAFAFA] dark:bg-[#1A1A1A] text-black dark:text-white hover:border-[var(--primary)] transition-all shadow-sm cursor-pointer"
         >
           {collapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
         </button>
 
-        <div>
-          <h1 className="text-2xl font-bold text-black dark:text-white">
+        <div className="min-w-0">
+          <h1 className="text-base sm:text-xl lg:text-2xl font-bold text-black dark:text-white truncate">
             Hola, {nombreUsuario}
           </h1>
 
-          <p className="mt-1 text-sm text-[#777777] dark:text-[#999999]">
+          <p className="hidden sm:block mt-0.5 text-xs sm:text-sm text-[#777777] dark:text-[#999999] truncate">
             {usuario?.organizacion?.nombre ? `${usuario.organizacion.nombre} · Resumen general` : "Aquí tienes el resumen de tu negocio."}
           </p>
         </div>

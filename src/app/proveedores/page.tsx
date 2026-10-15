@@ -241,12 +241,12 @@ export default function ProveedoresPage() {
 
         <div
           className={`flex flex-1 flex-col transition-all duration-300 ${
-            collapsed ? "ml-[80px]" : "ml-[250px]"
+            collapsed ? "ml-0 lg:ml-[80px]" : "ml-0 lg:ml-[250px]"
           }`}
         >
           <Header />
 
-          <main className="flex-1 p-6 md:p-8 space-y-6">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6">
             {/* Banner Offline */}
             {isOffline && (
               <div className="flex items-center gap-3 border border-amber-300 bg-amber-50 p-4 text-xs font-semibold text-amber-900">

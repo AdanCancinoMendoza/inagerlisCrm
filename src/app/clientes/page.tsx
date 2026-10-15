@@ -173,12 +173,12 @@ export default function ClientesPage() {
 
       <div
         className={`min-h-screen transition-all duration-300 ${
-          collapsed ? "ml-[80px]" : "ml-[250px]"
+          collapsed ? "ml-0 lg:ml-[80px]" : "ml-0 lg:ml-[250px]"
         }`}
       >
         <Header />
 
-        <div className="p-8 lg:p-10">
+        <div className="p-4 sm:p-6 lg:p-8">
           {/* Header de la sección */}
           <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>

@@ -73,10 +73,10 @@ export default function ClientesFrecuentesPage() {
     <main className="min-h-screen bg-[#F7F7F7]">
       <Sidebar />
 
-      <div className={`min-h-screen transition-all duration-300 ${collapsed ? "ml-[80px]" : "ml-[250px]"}`}>
+      <div className={`min-h-screen transition-all duration-300 ${collapsed ? "ml-0 lg:ml-[80px]" : "ml-0 lg:ml-[250px]"}`}>
         <Header />
 
-        <div className="p-10">
+        <div className="p-4 sm:p-6 lg:p-8">
           <div className="mb-8">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#D8A814]">
               Clientes

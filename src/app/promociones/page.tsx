@@ -660,12 +660,12 @@ export default function PromocionesPage() {
 
       <div
         className={`min-h-screen transition-all duration-300 ${
-          collapsed ? "ml-[80px]" : "ml-[250px]"
+          collapsed ? "ml-0 lg:ml-[80px]" : "ml-0 lg:ml-[250px]"
         }`}
       >
         <Header />
 
-        <div className="p-6 md:p-10 space-y-6">
+        <div className="p-4 sm:p-6 lg:p-8 space-y-6">
           {/* =========================================================
               ENCABEZADO DE LA SECCIÓN
           ========================================================= */}

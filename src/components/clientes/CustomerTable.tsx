@@ -31,16 +31,17 @@ export default function CustomerTable({
   }
 
   return (
-    <div className="overflow-hidden border border-[#E5E5E5] bg-white shadow-xs rounded-xl">
-      {/* Encabezado de la tabla */}
-      <div className="grid grid-cols-[2fr_1.2fr_1fr_1.2fr_1fr_180px] items-center border-b border-[#E5E5E5] bg-[#FAFAFA] px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#777777]">
-        <div>Cliente y Beneficios</div>
-        <div>Contacto</div>
-        <div>RFC</div>
-        <div>Historial de Ventas</div>
-        <div className="text-right pr-4">Fidelidad</div>
-        <div className="text-right">Acciones</div>
-      </div>
+    <div className="overflow-x-auto border border-[#E5E5E5] bg-white shadow-xs">
+      <div className="min-w-[780px]">
+        {/* Encabezado de la tabla */}
+        <div className="grid grid-cols-[2fr_1.2fr_1fr_1.2fr_1fr_180px] items-center border-b border-[#E5E5E5] bg-[#FAFAFA] px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#777777]">
+          <div>Cliente y Beneficios</div>
+          <div>Contacto</div>
+          <div>RFC</div>
+          <div>Historial de Ventas</div>
+          <div className="text-right pr-4">Fidelidad</div>
+          <div className="text-right">Acciones</div>
+        </div>
 
       {/* Filas de clientes */}
       <div className="divide-y divide-[#EEEEEE]">
@@ -156,6 +157,7 @@ export default function CustomerTable({
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );

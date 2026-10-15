@@ -283,10 +283,10 @@ export default function TicketsPage() {
     <main className="min-h-screen bg-[#F7F7F7]">
       <Sidebar />
 
-      <div className={`min-h-screen transition-all duration-300 ${collapsed ? "ml-[80px]" : "ml-[250px]"}`}>
+      <div className={`min-h-screen transition-all duration-300 ${collapsed ? "ml-0 lg:ml-[80px]" : "ml-0 lg:ml-[250px]"}`}>
         <Header />
 
-        <div className="p-10">
+        <div className="p-4 sm:p-6 lg:p-8">
           {/* Toast flotante */}
           {toastMessage && (
             <div className="fixed top-6 right-6 z-50 flex items-center gap-3 border-l-4 border-[#D8A814] bg-white p-4 shadow-xl">

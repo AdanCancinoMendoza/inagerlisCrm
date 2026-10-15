@@ -223,10 +223,10 @@ export default function CajaPage() {
     <main className="min-h-screen bg-[#F7F7F7]">
       <Sidebar />
 
-      <div className={`min-h-screen transition-all duration-300 ${collapsed ? "ml-[80px]" : "ml-[250px]"}`}>
+      <div className={`min-h-screen transition-all duration-300 ${collapsed ? "ml-0 lg:ml-[80px]" : "ml-0 lg:ml-[250px]"}`}>
         <Header />
 
-        <div className="p-10">
+        <div className="p-4 sm:p-6 lg:p-8">
           {notificacion && (
             <div className="mb-6 flex items-center justify-between border-l-4 border-l-[#D8A814] bg-white p-4 shadow-md">
               <div className="flex items-center gap-3">

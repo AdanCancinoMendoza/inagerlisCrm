@@ -51,16 +51,17 @@ export default function ProveedorTable({
   };
 
   return (
-    <div className="overflow-hidden border border-[#E5E5E5] bg-white shadow-xs">
-      {/* Encabezado */}
-      <div className="grid grid-cols-[2fr_1.3fr_1.1fr_1.1fr_90px_130px] items-center border-b border-[#E5E5E5] bg-[#FAFAFA] px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-[#777777]">
-        <div>Proveedor / Razón Social</div>
-        <div>Contacto Directo</div>
-        <div>Giro / Categoría</div>
-        <div>Crédito y Saldo</div>
-        <div className="text-center">Estado</div>
-        <div className="text-right">Acciones</div>
-      </div>
+    <div className="overflow-x-auto border border-[#E5E5E5] bg-white shadow-xs">
+      <div className="min-w-[800px]">
+        {/* Encabezado */}
+        <div className="grid grid-cols-[2fr_1.3fr_1.1fr_1.1fr_90px_130px] items-center border-b border-[#E5E5E5] bg-[#FAFAFA] px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-[#777777]">
+          <div>Proveedor / Razón Social</div>
+          <div>Contacto Directo</div>
+          <div>Giro / Categoría</div>
+          <div>Crédito y Saldo</div>
+          <div className="text-center">Estado</div>
+          <div className="text-right">Acciones</div>
+        </div>
 
       {/* Filas */}
       <div className="divide-y divide-[#EEEEEE]">
@@ -211,6 +212,7 @@ export default function ProveedorTable({
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );

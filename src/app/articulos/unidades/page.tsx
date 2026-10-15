@@ -179,7 +179,7 @@ export default function UnidadesPage() {
     <main className="min-h-screen bg-[#F7F7F7]">
       <Sidebar />
 
-      <div className={`min-h-screen transition-all duration-300 ${collapsed ? "ml-0 md:ml-[80px]" : "ml-0 md:ml-[250px]"}`}>
+      <div className={`min-h-screen transition-all duration-300 ${collapsed ? "ml-0 lg:ml-[80px]" : "ml-0 lg:ml-[250px]"}`}>
         <Header />
 
         {toastMessage && (
@@ -189,7 +189,7 @@ export default function UnidadesPage() {
           </div>
         )}
 
-        <div className="p-4 sm:p-6 lg:p-10">
+        <div className="p-4 sm:p-6 lg:p-8">
           {/* Header de la Vista */}
           <div className="mb-6 sm:mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>

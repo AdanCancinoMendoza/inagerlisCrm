@@ -28,13 +28,16 @@ import {
   Building2,
   CalendarDays,
   Truck,
+  X,
 } from "lucide-react";
 
 export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { collapsed } = useSidebar();
+  const { collapsed, mobileOpen, closeMobileSidebar } = useSidebar();
   const { isInstallable, isInstalled, installPwa } = usePwa();
+
+  const isExpanded = !collapsed || mobileOpen;
 
   const [clientesOpen, setClientesOpen] = useState(
     pathname.startsWith("/clientes")
@@ -42,10 +45,6 @@ export default function Sidebar() {
 
   const [articulosOpen, setArticulosOpen] = useState(
     pathname.startsWith("/articulos")
-  );
-
-  const [stockOpen, setStockOpen] = useState(
-    pathname.startsWith("/stock")
   );
 
   const [usuario, setUsuario] = useState<any>(null);
@@ -70,10 +69,12 @@ export default function Sidebar() {
   };
 
   const goTo = (route: string) => {
+    closeMobileSidebar();
     router.push(route);
   };
 
   const handleLogout = () => {
+    closeMobileSidebar();
     if (typeof window !== "undefined") {
       localStorage.removeItem("crm_usuario_actual");
       window.location.href = "/login";
@@ -81,505 +82,560 @@ export default function Sidebar() {
   };
 
   return (
-    <aside
-      className={`fixed left-0 top-0 z-40 flex h-screen flex-col bg-[var(--dark-bg)] text-white transition-all duration-300 ${
-        collapsed ? "w-[80px]" : "w-[250px]"
-      }`}
-    >
-      {/* Logo */}
-      <div className="flex h-24 shrink-0 items-center justify-center border-b border-[var(--dark-border)] px-4">
-        {!collapsed ? (
-          <Image
-            src="/logo.png"
-            alt="Logo"
-            width={150}
-            height={60}
-            priority
-            className="h-auto w-[130px] object-contain cursor-pointer"
-            onClick={() => goTo("/inicio")}
-          />
-        ) : (
-          <div
-            onClick={() => goTo("/inicio")}
-            className="mx-auto flex h-10 w-10 items-center justify-center border border-[var(--primary)] font-bold text-[var(--primary)] cursor-pointer"
-          >
-            C
-          </div>
-        )}
-      </div>
+    <>
+      {/* Backdrop overlay para pantallas móviles */}
+      {mobileOpen && (
+        <div
+          onClick={closeMobileSidebar}
+          className="fixed inset-0 z-40 bg-black/75 backdrop-blur-xs transition-opacity lg:hidden"
+          aria-hidden="true"
+        />
+      )}
 
-      {/* Navegación */}
-      <nav
-        className="
-          flex-1 overflow-y-auto px-3 py-6
-
-          [&::-webkit-scrollbar]:hidden
-          [-ms-overflow-style:none]
-          [scrollbar-width:none]
-        "
+      <aside
+        className={`fixed left-0 top-0 z-50 flex h-screen flex-col bg-[var(--dark-bg)] text-white transition-all duration-300 ease-in-out
+          ${/* Mobile: Drawer off-canvas */ ""}
+          ${mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"}
+          ${/* Desktop: Ancho dinámico según collapsed */ ""}
+          ${collapsed ? "lg:w-[80px]" : "lg:w-[250px]"}
+          w-[270px]
+        `}
       >
-        {!collapsed && (
-          <p className="mb-4 px-4 text-xs font-semibold uppercase tracking-[0.2em] text-[#777777]">
-            Principal
-          </p>
-        )}
+        {/* Cabecera con Logo y Botón de Cerrar en Móviles */}
+        <div className="flex h-16 sm:h-20 lg:h-24 shrink-0 items-center justify-between border-b border-[var(--dark-border)] px-4">
+          <div className="flex items-center gap-3">
+            {isExpanded ? (
+              <Image
+                src="/logo.png"
+                alt="Logo Inagerlis"
+                width={130}
+                height={52}
+                priority
+                className="h-auto w-[120px] lg:w-[130px] object-contain cursor-pointer"
+                onClick={() => goTo("/inicio")}
+              />
+            ) : (
+              <div
+                onClick={() => goTo("/inicio")}
+                className="mx-auto flex h-10 w-10 items-center justify-center border border-[var(--primary)] font-bold text-[var(--primary)] cursor-pointer"
+              >
+                C
+              </div>
+            )}
+          </div>
 
-        {/* Inicio */}
-        {canVer("inicio") && (
+          {/* Botón cerrar para móviles */}
           <button
-            onClick={() => goTo("/inicio")}
-            title="Inicio"
-            className={`
-              flex h-12 w-full items-center
-              border-l-2 transition-colors
-              ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
-              text-sm font-medium
-              ${
-                pathname === "/inicio"
-                  ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
-                  : "border-transparent text-[#C5C5C5] hover:text-white"
-              }
-            `}
+            onClick={closeMobileSidebar}
+            className="flex h-8 w-8 items-center justify-center border border-[#333333] text-[#888888] hover:text-white lg:hidden cursor-pointer"
+            title="Cerrar menú"
           >
-            <House size={18} strokeWidth={1.8} />
-            {!collapsed && <span>Inicio</span>}
+            <X size={18} />
           </button>
-        )}
+        </div>
 
-        {/* Ventas (Productos, Carrito y Pagar) */}
-        {canVer("ventas") && (
-          <button
-            onClick={() => goTo("/ventas")}
-            title="Ventas"
-            className={`
-              mt-2 flex h-12 w-full items-center
-              border-l-2 transition-colors
-              ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
-              text-sm font-medium
-              ${
-                pathname.startsWith("/ventas")
-                  ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
-                  : "border-transparent text-[#C5C5C5] hover:text-white"
-              }
-            `}
-          >
-            <ShoppingCart size={18} strokeWidth={1.8} />
-            {!collapsed && <span>Ventas</span>}
-          </button>
-        )}
+        {/* Navegación */}
+        <nav
+          className="
+            flex-1 overflow-y-auto px-3 py-4 sm:py-6
+            [&::-webkit-scrollbar]:hidden
+            [-ms-overflow-style:none]
+            [scrollbar-width:none]
+          "
+        >
+          {isExpanded && (
+            <p className="mb-3 px-4 text-xs font-semibold uppercase tracking-[0.2em] text-[#777777]">
+              Principal
+            </p>
+          )}
 
-        {/* Clientes */}
-        {canVer("clientes") && (
-          <div className="mt-2">
+          {/* Inicio */}
+          {canVer("inicio") && (
             <button
-              onClick={() => (collapsed ? goTo("/clientes") : setClientesOpen(!clientesOpen))}
-              title="Clientes"
+              onClick={() => goTo("/inicio")}
+              title="Inicio"
               className={`
                 flex h-12 w-full items-center
                 border-l-2 transition-colors
-                ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
+                ${isExpanded ? "gap-3 px-4 text-left" : "justify-center px-0"}
                 text-sm font-medium
                 ${
-                  pathname.startsWith("/clientes")
-                    ? "border-[var(--primary)] text-[var(--primary)]"
+                  pathname === "/inicio"
+                    ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
                     : "border-transparent text-[#C5C5C5] hover:text-white"
                 }
               `}
             >
-              <Users size={18} strokeWidth={1.8} />
-              {!collapsed && (
-                <>
-                  <span className="flex-1">Clientes</span>
-                  <ChevronDown
-                    size={15}
-                    className={`transition-transform duration-200 ${clientesOpen ? "rotate-180" : ""}`}
-                  />
-                </>
-              )}
+              <House size={18} strokeWidth={1.8} />
+              {isExpanded && <span>Inicio</span>}
             </button>
+          )}
 
-            {!collapsed && clientesOpen && (
-              <div className="ml-[27px] border-l border-[#2B2B2B] pl-5">
-                <button
-                  onClick={() => goTo("/clientes")}
-                  className={`block w-full py-2.5 text-left text-sm ${
-                    pathname === "/clientes" ? "font-semibold text-[var(--primary)]" : "text-[#8F8F8F] hover:text-white"
-                  }`}
-                >
-                  Todos los clientes
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Artículos (con submódulos de Productos, Stock, Familias y Unidades) */}
-        {(canVer("articulos") || canVer("stock")) && (
-          <div className="mt-2">
+          {/* Ventas */}
+          {canVer("ventas") && (
             <button
-              onClick={() => (collapsed ? goTo("/articulos") : setArticulosOpen(!articulosOpen))}
-              title="Artículos"
+              onClick={() => goTo("/ventas")}
+              title="Ventas"
               className={`
-                flex h-12 w-full items-center
+                mt-2 flex h-12 w-full items-center
                 border-l-2 transition-colors
-                ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
+                ${isExpanded ? "gap-3 px-4 text-left" : "justify-center px-0"}
                 text-sm font-medium
                 ${
-                  pathname.startsWith("/articulos") || pathname.startsWith("/stock")
-                    ? "border-[var(--primary)] text-[var(--primary)]"
+                  pathname.startsWith("/ventas")
+                    ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
                     : "border-transparent text-[#C5C5C5] hover:text-white"
                 }
               `}
             >
-              <Package size={18} strokeWidth={1.8} />
-              {!collapsed && (
-                <>
-                  <span className="flex-1">Artículos</span>
-                  <ChevronDown
-                    size={15}
-                    className={`transition-transform duration-200 ${articulosOpen ? "rotate-180" : ""}`}
-                  />
-                </>
-              )}
+              <ShoppingCart size={18} strokeWidth={1.8} />
+              {isExpanded && <span>Ventas</span>}
             </button>
+          )}
 
-            {!collapsed && articulosOpen && (
-              <div className="ml-[27px] border-l border-[#2B2B2B] pl-4 flex flex-col gap-1 my-1">
-                <button
-                  onClick={() => goTo("/articulos")}
-                  className={`block w-full py-2 text-left text-xs transition-colors ${
-                    pathname === "/articulos" ? "font-bold text-[var(--primary)]" : "text-[#8F8F8F] hover:text-white"
-                  }`}
-                >
-                  Productos (Catálogo)
-                </button>
-
-                <button
-                  onClick={() => goTo("/stock")}
-                  className={`block w-full py-2 text-left text-xs transition-colors ${
-                    pathname.startsWith("/stock") ? "font-bold text-[var(--primary)]" : "text-[#8F8F8F] hover:text-white"
-                  }`}
-                >
-                  Stock / Inventario
-                </button>
-
-                <button
-                  onClick={() => goTo("/articulos/familias")}
-                  className={`block w-full py-2 text-left text-xs transition-colors ${
-                    pathname.startsWith("/articulos/familias") ? "font-bold text-[var(--primary)]" : "text-[#8F8F8F] hover:text-white"
-                  }`}
-                >
-                  Familias y Subfamilias
-                </button>
-
-                <button
-                  onClick={() => goTo("/articulos/unidades")}
-                  className={`block w-full py-2 text-left text-xs transition-colors ${
-                    pathname.startsWith("/articulos/unidades") ? "font-bold text-[var(--primary)]" : "text-[#8F8F8F] hover:text-white"
-                  }`}
-                >
-                  Unidades de Medida
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Proveedores */}
-        {canVer("proveedores") && (
-          <button
-            onClick={() => goTo("/proveedores")}
-            title="Proveedores"
-            className={`
-              mt-2 flex h-12 w-full items-center
-              border-l-2 transition-colors
-              ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
-              text-sm font-medium
-              ${
-                pathname.startsWith("/proveedores")
-                  ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
-                  : "border-transparent text-[#C5C5C5] hover:text-white"
-              }
-            `}
-          >
-            <Truck size={18} strokeWidth={1.8} />
-            {!collapsed && <span>Proveedores</span>}
-          </button>
-        )}
-
-        {/* Campañas */}
-        {(canVer("promociones") || canVer("campañas")) && (
-          <button
-            onClick={() => goTo("/promociones")}
-            title="Campañas"
-            className={`
-              mt-2 flex h-12 w-full items-center
-              border-l-2 transition-colors
-              ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
-              text-sm font-medium
-              ${
-                pathname.startsWith("/promociones") || pathname.startsWith("/campañas")
-                  ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
-                  : "border-transparent text-[#C5C5C5] hover:text-white"
-              }
-            `}
-          >
-            <Megaphone size={18} strokeWidth={1.8} />
-            {!collapsed && <span>Campañas</span>}
-          </button>
-        )}
-
-        {/* Calendario (Pedidos y Recordatorios) */}
-        {canVer("calendario") && (
-          <button
-            onClick={() => goTo("/calendario")}
-            title="Calendario"
-            className={`
-              mt-2 flex h-12 w-full items-center
-              border-l-2 transition-colors
-              ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
-              text-sm font-medium
-              ${
-                pathname.startsWith("/calendario")
-                  ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
-                  : "border-transparent text-[#C5C5C5] hover:text-white"
-              }
-            `}
-          >
-            <CalendarDays size={18} strokeWidth={1.8} />
-            {!collapsed && <span>Calendario</span>}
-          </button>
-        )}
-
-        {/* Usuarios y Perfiles */}
-        {canVer("usuarios") && (
-          <button
-            onClick={() => goTo("/usuarios")}
-            title="Usuarios y Perfiles"
-            className={`
-              mt-2 flex h-12 w-full items-center
-              border-l-2 transition-colors
-              ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
-              text-sm font-medium
-              ${
-                pathname.startsWith("/usuarios")
-                  ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
-                  : "border-transparent text-[#C5C5C5] hover:text-white"
-              }
-            `}
-          >
-            <UserRoundCog size={18} strokeWidth={1.8} />
-            {!collapsed && <span>Usuarios</span>}
-          </button>
-        )}
-
-        {/* Mi Organización (Sucursales y Terminales) */}
-        {canVer("configuracion") && (
-          <button
-            onClick={() => goTo("/organizacion")}
-            title="Mi Organización"
-            className={`
-              mt-2 flex h-12 w-full items-center
-              border-l-2 transition-colors
-              ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
-              text-sm font-medium
-              ${
-                pathname.startsWith("/organizacion") || pathname.startsWith("/mi-organizacion")
-                  ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
-                  : "border-transparent text-[#C5C5C5] hover:text-white"
-              }
-            `}
-          >
-            <Building2 size={18} strokeWidth={1.8} />
-            {!collapsed && <span>Mi Organización</span>}
-          </button>
-        )}
-
-        {/* Configuración */}
-        {canVer("configuracion") && (
-          <button
-            onClick={() => goTo("/configuracion")}
-            title="Configuración"
-            className={`
-              mt-2 flex h-12 w-full items-center
-              border-l-2 transition-colors
-              ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
-              text-sm font-medium
-              ${
-                pathname.startsWith("/configuracion")
-                  ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
-                  : "border-transparent text-[#C5C5C5] hover:text-white"
-              }
-            `}
-          >
-            <Settings size={18} strokeWidth={1.8} />
-            {!collapsed && <span>Configuración</span>}
-          </button>
-        )}
-
-        {/* Suscripciones (para administradores de la organización) */}
-        {(usuario?.perfil?.esAdmin || usuario?.rol === "ADMIN") && (
-          <button
-            onClick={() => goTo("/suscripciones")}
-            title="Suscripciones"
-            className={`
-              mt-2 flex h-12 w-full items-center
-              border-l-2 transition-colors
-              ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
-              text-sm font-medium
-              ${
-                pathname.startsWith("/suscripciones") || pathname.startsWith("/subscripciones")
-                  ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
-                  : "border-transparent text-[#C5C5C5] hover:text-white"
-              }
-            `}
-          >
-            <CreditCard size={18} strokeWidth={1.8} />
-            {!collapsed && <span>Suscripciones</span>}
-          </button>
-        )}
-
-        {/* Operaciones */}
-        {(canVer("ventas") || canVer("caja") || canVer("tickets") || canVer("reportes")) && (
-          <div className="mt-6">
-            {!collapsed && (
-              <p className="mb-4 px-4 text-xs font-semibold uppercase tracking-[0.2em] text-[#777777]">
-                Operaciones
-              </p>
-            )}
-
-            {canVer("ventas") && (
+          {/* Clientes */}
+          {canVer("clientes") && (
+            <div className="mt-2">
               <button
-                onClick={() => goTo("/analiticas")}
-                title="Analíticas"
+                onClick={() =>
+                  collapsed && !mobileOpen
+                    ? goTo("/clientes")
+                    : setClientesOpen(!clientesOpen)
+                }
+                title="Clientes"
                 className={`
                   flex h-12 w-full items-center
                   border-l-2 transition-colors
-                  ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
+                  ${isExpanded ? "gap-3 px-4 text-left" : "justify-center px-0"}
                   text-sm font-medium
                   ${
-                    pathname.startsWith("/analiticas")
-                      ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
+                    pathname.startsWith("/clientes")
+                      ? "border-[var(--primary)] text-[var(--primary)]"
                       : "border-transparent text-[#C5C5C5] hover:text-white"
                   }
                 `}
               >
-                <BarChart3 size={18} strokeWidth={1.8} />
-                {!collapsed && <span>Analíticas</span>}
+                <Users size={18} strokeWidth={1.8} />
+                {isExpanded && (
+                  <>
+                    <span className="flex-1">Clientes</span>
+                    <ChevronDown
+                      size={15}
+                      className={`transition-transform duration-200 ${
+                        clientesOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </>
+                )}
               </button>
-            )}
 
-            {canVer("caja") && (
+              {isExpanded && clientesOpen && (
+                <div className="ml-[27px] border-l border-[#2B2B2B] pl-5">
+                  <button
+                    onClick={() => goTo("/clientes")}
+                    className={`block w-full py-2.5 text-left text-sm ${
+                      pathname === "/clientes"
+                        ? "font-semibold text-[var(--primary)]"
+                        : "text-[#8F8F8F] hover:text-white"
+                    }`}
+                  >
+                    Todos los clientes
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Artículos */}
+          {(canVer("articulos") || canVer("stock")) && (
+            <div className="mt-2">
               <button
-                onClick={() => goTo("/caja")}
-                title="Caja Registradora"
+                onClick={() =>
+                  collapsed && !mobileOpen
+                    ? goTo("/articulos")
+                    : setArticulosOpen(!articulosOpen)
+                }
+                title="Artículos"
                 className={`
-                  mt-2 flex h-12 w-full items-center
+                  flex h-12 w-full items-center
                   border-l-2 transition-colors
-                  ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
+                  ${isExpanded ? "gap-3 px-4 text-left" : "justify-center px-0"}
                   text-sm font-medium
                   ${
-                    pathname.startsWith("/caja")
-                      ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
+                    pathname.startsWith("/articulos") || pathname.startsWith("/stock")
+                      ? "border-[var(--primary)] text-[var(--primary)]"
                       : "border-transparent text-[#C5C5C5] hover:text-white"
                   }
                 `}
               >
-                <WalletCards size={18} strokeWidth={1.8} />
-                {!collapsed && <span>Caja Registradora</span>}
+                <Package size={18} strokeWidth={1.8} />
+                {isExpanded && (
+                  <>
+                    <span className="flex-1">Artículos</span>
+                    <ChevronDown
+                      size={15}
+                      className={`transition-transform duration-200 ${
+                        articulosOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </>
+                )}
               </button>
-            )}
 
-            {canVer("tickets") && (
-              <button
-                onClick={() => goTo("/tickets")}
-                title="Historial de tickets"
-                className={`
-                  mt-2 flex h-12 w-full items-center
-                  border-l-2 transition-colors
-                  ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
-                  text-sm font-medium
-                  ${
-                    pathname.startsWith("/tickets")
-                      ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
-                      : "border-transparent text-[#C5C5C5] hover:text-white"
-                  }
-                `}
-              >
-                <ReceiptText size={18} strokeWidth={1.8} />
-                {!collapsed && <span>Historial de tickets</span>}
-              </button>
-            )}
+              {isExpanded && articulosOpen && (
+                <div className="ml-[27px] border-l border-[#2B2B2B] pl-4 flex flex-col gap-1 my-1">
+                  <button
+                    onClick={() => goTo("/articulos")}
+                    className={`block w-full py-2 text-left text-xs transition-colors ${
+                      pathname === "/articulos"
+                        ? "font-bold text-[var(--primary)]"
+                        : "text-[#8F8F8F] hover:text-white"
+                    }`}
+                  >
+                    Productos (Catálogo)
+                  </button>
 
-            {canVer("reportes") && (
-              <button
-                onClick={() => goTo("/reportes")}
-                title="Reportes"
-                className={`
-                  mt-2 flex h-12 w-full items-center
-                  border-l-2 transition-colors
-                  ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
-                  text-sm font-medium
-                  ${
-                    pathname.startsWith("/reportes")
-                      ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
-                      : "border-transparent text-[#C5C5C5] hover:text-white"
-                  }
-                `}
-              >
-                <ChartNoAxesCombined size={18} strokeWidth={1.8} />
-                {!collapsed && <span>Reportes</span>}
-              </button>
-            )}
-          </div>
-        )}
+                  <button
+                    onClick={() => goTo("/stock")}
+                    className={`block w-full py-2 text-left text-xs transition-colors ${
+                      pathname.startsWith("/stock")
+                        ? "font-bold text-[var(--primary)]"
+                        : "text-[#8F8F8F] hover:text-white"
+                    }`}
+                  >
+                    Stock / Inventario
+                  </button>
 
-        {/* Botón Descargar / Instalar PWA */}
-        {isInstallable && !isInstalled && (
-          <div className="mt-6 pt-4 border-t border-[#222222]">
+                  <button
+                    onClick={() => goTo("/articulos/familias")}
+                    className={`block w-full py-2 text-left text-xs transition-colors ${
+                      pathname.startsWith("/articulos/familias")
+                        ? "font-bold text-[var(--primary)]"
+                        : "text-[#8F8F8F] hover:text-white"
+                    }`}
+                  >
+                    Familias y Subfamilias
+                  </button>
+
+                  <button
+                    onClick={() => goTo("/articulos/unidades")}
+                    className={`block w-full py-2 text-left text-xs transition-colors ${
+                      pathname.startsWith("/articulos/unidades")
+                        ? "font-bold text-[var(--primary)]"
+                        : "text-[#8F8F8F] hover:text-white"
+                    }`}
+                  >
+                    Unidades de Medida
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Proveedores */}
+          {canVer("proveedores") && (
             <button
-              onClick={installPwa}
-              title="Instalar Inagerlis en este equipo"
+              onClick={() => goTo("/proveedores")}
+              title="Proveedores"
               className={`
-                flex h-11 w-full items-center
-                border border-[#D8A814]/40 bg-[#D8A814]/10 text-[#D8A814]
-                hover:bg-[#D8A814] hover:text-black transition-all
-                ${collapsed ? "justify-center px-0" : "gap-3 px-3 text-left"}
-                text-xs font-bold cursor-pointer active:scale-95
+                mt-2 flex h-12 w-full items-center
+                border-l-2 transition-colors
+                ${isExpanded ? "gap-3 px-4 text-left" : "justify-center px-0"}
+                text-sm font-medium
+                ${
+                  pathname.startsWith("/proveedores")
+                    ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
+                    : "border-transparent text-[#C5C5C5] hover:text-white"
+                }
               `}
             >
-              <Download size={16} />
-              {!collapsed && <span>Instalar Aplicación</span>}
+              <Truck size={18} strokeWidth={1.8} />
+              {isExpanded && <span>Proveedores</span>}
             </button>
-          </div>
-        )}
-      </nav>
+          )}
 
-      {/* Usuario Footer */}
-      <div className="shrink-0 border-t border-[#262626] bg-[#050505] p-4">
-        <div className={`flex w-full items-center justify-between ${collapsed ? "flex-col gap-3" : ""}`}>
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-[var(--primary)] font-bold text-white">
-              {(usuario?.nombre || "U").charAt(0).toUpperCase()}
+          {/* Campañas */}
+          {(canVer("promociones") || canVer("campañas")) && (
+            <button
+              onClick={() => goTo("/promociones")}
+              title="Campañas"
+              className={`
+                mt-2 flex h-12 w-full items-center
+                border-l-2 transition-colors
+                ${isExpanded ? "gap-3 px-4 text-left" : "justify-center px-0"}
+                text-sm font-medium
+                ${
+                  pathname.startsWith("/promociones") || pathname.startsWith("/campañas")
+                    ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
+                    : "border-transparent text-[#C5C5C5] hover:text-white"
+                }
+              `}
+            >
+              <Megaphone size={18} strokeWidth={1.8} />
+              {isExpanded && <span>Campañas</span>}
+            </button>
+          )}
+
+          {/* Calendario */}
+          {canVer("calendario") && (
+            <button
+              onClick={() => goTo("/calendario")}
+              title="Calendario"
+              className={`
+                mt-2 flex h-12 w-full items-center
+                border-l-2 transition-colors
+                ${isExpanded ? "gap-3 px-4 text-left" : "justify-center px-0"}
+                text-sm font-medium
+                ${
+                  pathname.startsWith("/calendario")
+                    ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
+                    : "border-transparent text-[#C5C5C5] hover:text-white"
+                }
+              `}
+            >
+              <CalendarDays size={18} strokeWidth={1.8} />
+              {isExpanded && <span>Calendario</span>}
+            </button>
+          )}
+
+          {/* Usuarios */}
+          {canVer("usuarios") && (
+            <button
+              onClick={() => goTo("/usuarios")}
+              title="Usuarios y Perfiles"
+              className={`
+                mt-2 flex h-12 w-full items-center
+                border-l-2 transition-colors
+                ${isExpanded ? "gap-3 px-4 text-left" : "justify-center px-0"}
+                text-sm font-medium
+                ${
+                  pathname.startsWith("/usuarios")
+                    ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
+                    : "border-transparent text-[#C5C5C5] hover:text-white"
+                }
+              `}
+            >
+              <UserRoundCog size={18} strokeWidth={1.8} />
+              {isExpanded && <span>Usuarios</span>}
+            </button>
+          )}
+
+          {/* Mi Organización */}
+          {canVer("configuracion") && (
+            <button
+              onClick={() => goTo("/organizacion")}
+              title="Mi Organización"
+              className={`
+                mt-2 flex h-12 w-full items-center
+                border-l-2 transition-colors
+                ${isExpanded ? "gap-3 px-4 text-left" : "justify-center px-0"}
+                text-sm font-medium
+                ${
+                  pathname.startsWith("/organizacion") || pathname.startsWith("/mi-organizacion")
+                    ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
+                    : "border-transparent text-[#C5C5C5] hover:text-white"
+                }
+              `}
+            >
+              <Building2 size={18} strokeWidth={1.8} />
+              {isExpanded && <span>Mi Organización</span>}
+            </button>
+          )}
+
+          {/* Configuración */}
+          {canVer("configuracion") && (
+            <button
+              onClick={() => goTo("/configuracion")}
+              title="Configuración"
+              className={`
+                mt-2 flex h-12 w-full items-center
+                border-l-2 transition-colors
+                ${isExpanded ? "gap-3 px-4 text-left" : "justify-center px-0"}
+                text-sm font-medium
+                ${
+                  pathname.startsWith("/configuracion")
+                    ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
+                    : "border-transparent text-[#C5C5C5] hover:text-white"
+                }
+              `}
+            >
+              <Settings size={18} strokeWidth={1.8} />
+              {isExpanded && <span>Configuración</span>}
+            </button>
+          )}
+
+          {/* Suscripciones */}
+          {(usuario?.perfil?.esAdmin || usuario?.rol === "ADMIN") && (
+            <button
+              onClick={() => goTo("/suscripciones")}
+              title="Suscripciones"
+              className={`
+                mt-2 flex h-12 w-full items-center
+                border-l-2 transition-colors
+                ${isExpanded ? "gap-3 px-4 text-left" : "justify-center px-0"}
+                text-sm font-medium
+                ${
+                  pathname.startsWith("/suscripciones") || pathname.startsWith("/subscripciones")
+                    ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
+                    : "border-transparent text-[#C5C5C5] hover:text-white"
+                }
+              `}
+            >
+              <CreditCard size={18} strokeWidth={1.8} />
+              {isExpanded && <span>Suscripciones</span>}
+            </button>
+          )}
+
+          {/* Operaciones */}
+          {(canVer("ventas") || canVer("caja") || canVer("tickets") || canVer("reportes")) && (
+            <div className="mt-6">
+              {isExpanded && (
+                <p className="mb-3 px-4 text-xs font-semibold uppercase tracking-[0.2em] text-[#777777]">
+                  Operaciones
+                </p>
+              )}
+
+              {canVer("ventas") && (
+                <button
+                  onClick={() => goTo("/analiticas")}
+                  title="Analíticas"
+                  className={`
+                    flex h-12 w-full items-center
+                    border-l-2 transition-colors
+                    ${isExpanded ? "gap-3 px-4 text-left" : "justify-center px-0"}
+                    text-sm font-medium
+                    ${
+                      pathname.startsWith("/analiticas")
+                        ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
+                        : "border-transparent text-[#C5C5C5] hover:text-white"
+                    }
+                  `}
+                >
+                  <BarChart3 size={18} strokeWidth={1.8} />
+                  {isExpanded && <span>Analíticas</span>}
+                </button>
+              )}
+
+              {canVer("caja") && (
+                <button
+                  onClick={() => goTo("/caja")}
+                  title="Caja Registradora"
+                  className={`
+                    mt-2 flex h-12 w-full items-center
+                    border-l-2 transition-colors
+                    ${isExpanded ? "gap-3 px-4 text-left" : "justify-center px-0"}
+                    text-sm font-medium
+                    ${
+                      pathname.startsWith("/caja")
+                        ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
+                        : "border-transparent text-[#C5C5C5] hover:text-white"
+                    }
+                  `}
+                >
+                  <WalletCards size={18} strokeWidth={1.8} />
+                  {isExpanded && <span>Caja Registradora</span>}
+                </button>
+              )}
+
+              {canVer("tickets") && (
+                <button
+                  onClick={() => goTo("/tickets")}
+                  title="Historial de tickets"
+                  className={`
+                    mt-2 flex h-12 w-full items-center
+                    border-l-2 transition-colors
+                    ${isExpanded ? "gap-3 px-4 text-left" : "justify-center px-0"}
+                    text-sm font-medium
+                    ${
+                      pathname.startsWith("/tickets")
+                        ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
+                        : "border-transparent text-[#C5C5C5] hover:text-white"
+                    }
+                  `}
+                >
+                  <ReceiptText size={18} strokeWidth={1.8} />
+                  {isExpanded && <span>Historial de tickets</span>}
+                </button>
+              )}
+
+              {canVer("reportes") && (
+                <button
+                  onClick={() => goTo("/reportes")}
+                  title="Reportes"
+                  className={`
+                    mt-2 flex h-12 w-full items-center
+                    border-l-2 transition-colors
+                    ${isExpanded ? "gap-3 px-4 text-left" : "justify-center px-0"}
+                    text-sm font-medium
+                    ${
+                      pathname.startsWith("/reportes")
+                        ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
+                        : "border-transparent text-[#C5C5C5] hover:text-white"
+                    }
+                  `}
+                >
+                  <ChartNoAxesCombined size={18} strokeWidth={1.8} />
+                  {isExpanded && <span>Reportes</span>}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Botón Instalar PWA */}
+          {isInstallable && !isInstalled && (
+            <div className="mt-6 pt-4 border-t border-[#222222]">
+              <button
+                onClick={installPwa}
+                title="Instalar Inagerlis en este equipo"
+                className={`
+                  flex h-11 w-full items-center
+                  border border-[#D8A814]/40 bg-[#D8A814]/10 text-[#D8A814]
+                  hover:bg-[#D8A814] hover:text-black transition-all
+                  ${isExpanded ? "gap-3 px-3 text-left" : "justify-center px-0"}
+                  text-xs font-bold cursor-pointer active:scale-95
+                `}
+              >
+                <Download size={16} />
+                {isExpanded && <span>Instalar Aplicación</span>}
+              </button>
+            </div>
+          )}
+        </nav>
+
+        {/* Usuario Footer */}
+        <div className="shrink-0 border-t border-[#262626] bg-[#050505] p-3.5 sm:p-4">
+          <div
+            className={`flex w-full items-center justify-between ${
+              isExpanded ? "" : "flex-col gap-3"
+            }`}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-9 w-9 sm:h-10 sm:w-10 flex-none items-center justify-center rounded-full bg-[var(--primary)] font-bold text-white text-xs sm:text-sm">
+                {(usuario?.nombre || "U").charAt(0).toUpperCase()}
+              </div>
+
+              {isExpanded && (
+                <div className="min-w-0 text-left">
+                  <p className="truncate text-xs sm:text-sm font-semibold text-white">
+                    {usuario?.nombre || "Usuario"}
+                  </p>
+                  <p className="text-[10px] sm:text-xs text-[var(--primary)] font-medium truncate">
+                    {getNombrePerfil(usuario)}
+                  </p>
+                </div>
+              )}
             </div>
 
-            {!collapsed && (
-              <div className="min-w-0 text-left">
-                <p className="truncate text-sm font-semibold text-white">{usuario?.nombre || "Usuario"}</p>
-                <p className="text-xs text-[var(--primary)] font-medium">{getNombrePerfil(usuario)}</p>
-              </div>
-            )}
+            <button
+              onClick={handleLogout}
+              title="Cerrar sesión"
+              className="flex h-9 w-9 shrink-0 items-center justify-center text-[#888888] hover:bg-red-500/20 hover:text-red-400 transition-colors rounded cursor-pointer"
+            >
+              <LogOut size={18} />
+            </button>
           </div>
-
-          <button
-            onClick={handleLogout}
-            title="Cerrar sesión"
-            className="flex h-9 w-9 items-center justify-center text-[#888888] hover:bg-red-500/20 hover:text-red-400 transition-colors rounded cursor-pointer"
-          >
-            <LogOut size={18} />
-          </button>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }
