@@ -222,6 +222,7 @@ export function canAccessRoute(pathname: string, usuario?: UsuarioPerfil | null)
   if (pathname.startsWith("/stock")) return hasModuloPermiso("stock", "ver");
   if (pathname.startsWith("/promociones") || pathname.startsWith("/campañas")) return hasModuloPermiso("promociones", "ver");
   if (pathname.startsWith("/calendario")) return hasModuloPermiso("calendario", "ver");
+  if (pathname.startsWith("/proveedores")) return hasModuloPermiso("proveedores", "ver");
   if (pathname.startsWith("/reportes") || pathname.startsWith("/analiticas")) return hasModuloPermiso("reportes", "ver");
   if (pathname.startsWith("/usuarios")) return hasModuloPermiso("usuarios", "ver");
   if (

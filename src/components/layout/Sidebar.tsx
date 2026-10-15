@@ -27,6 +27,7 @@ import {
   BarChart3,
   Building2,
   CalendarDays,
+  Truck,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -282,6 +283,28 @@ export default function Sidebar() {
               </div>
             )}
           </div>
+        )}
+
+        {/* Proveedores */}
+        {canVer("proveedores") && (
+          <button
+            onClick={() => goTo("/proveedores")}
+            title="Proveedores"
+            className={`
+              mt-2 flex h-12 w-full items-center
+              border-l-2 transition-colors
+              ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
+              text-sm font-medium
+              ${
+                pathname.startsWith("/proveedores")
+                  ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
+                  : "border-transparent text-[#C5C5C5] hover:text-white"
+              }
+            `}
+          >
+            <Truck size={18} strokeWidth={1.8} />
+            {!collapsed && <span>Proveedores</span>}
+          </button>
         )}
 
         {/* Campañas */}
