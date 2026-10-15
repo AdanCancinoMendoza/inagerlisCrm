@@ -61,7 +61,7 @@ body {
 }
 
 /* ==========================================================================
-   Custom Sleek Scrollbar System (Chrome, Safari, Edge, Firefox)
+   Scrollbar Neutral Discreto (Chrome, Safari, Edge, Firefox)
    ========================================================================== */
 
 /* Firefox Standard */
@@ -81,26 +81,35 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.18);
-  border-radius: 9999px;
-  transition: background-color 0.2s ease;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--primary);
+  background: rgba(0, 0, 0, 0.3);
 }
 
-/* Dark mode / dark containers scrollbar */
-.bg-\[\#050505\]::-webkit-scrollbar-thumb,
-.bg-\[var\(--dark-bg\)\]::-webkit-scrollbar-thumb,
-[data-theme="dark"]::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+/* ==========================================================================
+   Eliminación Total de Scrollbar en Menú Lateral / Sidebar
+   ========================================================================== */
+aside,
+aside *,
+nav.sidebar-nav,
+.sidebar-nav,
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
 }
 
-.bg-\[\#050505\]::-webkit-scrollbar-thumb:hover,
-.bg-\[var\(--dark-bg\)\]::-webkit-scrollbar-thumb:hover,
-[data-theme="dark"]::-webkit-scrollbar-thumb:hover {
-  background: var(--primary);
+aside::-webkit-scrollbar,
+aside *::-webkit-scrollbar,
+nav.sidebar-nav::-webkit-scrollbar,
+.sidebar-nav::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
 }
 
 /* System Theme Color Helper Utilities */

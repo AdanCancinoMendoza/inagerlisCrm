@@ -93,7 +93,7 @@ export default function Sidebar() {
       )}
 
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen flex-col bg-[var(--dark-bg)] text-white transition-all duration-300 ease-in-out
+        className={`sidebar-nav no-scrollbar fixed left-0 top-0 z-50 flex h-screen flex-col bg-[var(--dark-bg)] text-white transition-all duration-300 ease-in-out
           ${/* Mobile: Drawer off-canvas */ ""}
           ${mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"}
           ${/* Desktop: Ancho dinámico según collapsed */ ""}
@@ -135,14 +135,7 @@ export default function Sidebar() {
         </div>
 
         {/* Navegación */}
-        <nav
-          className="
-            flex-1 overflow-y-auto px-3 py-4 sm:py-6
-            [&::-webkit-scrollbar]:hidden
-            [-ms-overflow-style:none]
-            [scrollbar-width:none]
-          "
-        >
+        <nav className="sidebar-nav no-scrollbar flex-1 overflow-y-auto px-3 py-3 sm:py-4">
           {isExpanded && (
             <p className="mb-3 px-4 text-xs font-semibold uppercase tracking-[0.2em] text-[#777777]">
               Principal
