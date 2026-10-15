@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import { useSidebar } from "@/context/SidebarContext";
-import { CalendarCheck, Plus, Check, X, Search } from "lucide-react";
+import { CalendarCheck, Plus, Check, X, Search, Loader2 } from "lucide-react";
+import { apiRequest } from "@/services/api";
+import { getOrganizacionId, getUsuarioActual } from "@/services/auth";
+import { enqueueOfflineCalendario } from "@/services/calendarioSync";
 
 interface FollowUp {
   id: string;
@@ -24,6 +27,7 @@ export default function SeguimientosPage() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("Todos los tipos");
   const [modalNuevo, setModalNuevo] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Form states
   const [customer, setCustomer] = useState("");
@@ -31,7 +35,46 @@ export default function SeguimientosPage() {
   const [type, setType] = useState("Llamada");
   const [note, setNote] = useState("");
 
-  useEffect(() => {
+  const loadItems = useCallback(async () => {
+    const user = getUsuarioActual();
+    const orgId = getOrganizacionId() || user?.organizacionId;
+
+    if (!orgId) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      if (typeof window !== "undefined" && navigator.onLine) {
+        const data = await apiRequest<any[]>(`/calendario?organizacionId=${orgId}`);
+        if (Array.isArray(data)) {
+          const recordatorios = data
+            .filter((ev) => ev.tipo === "RECORDATORIO")
+            .map((ev) => ({
+              id: ev.id,
+              customer: ev.clienteNombre || ev.titulo || "Cliente",
+              phone: ev.telefono || "",
+              type: "Llamada",
+              note: ev.descripcion || "",
+              date: ev.fecha,
+              time: ev.hora || "",
+              status: (ev.estado === "COMPLETADO" ? "Completado" : "Pendiente") as "Pendiente" | "Completado",
+            }));
+
+          setItems(recordatorios);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("crm_clientes_seguimientos", JSON.stringify(recordatorios));
+          }
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn("Fallo al consultar seguimientos del servidor, cargando local...", err);
+    } finally {
+      setLoading(false);
+    }
+
+    // Fallback local
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("crm_clientes_seguimientos");
       if (saved) {
@@ -44,6 +87,10 @@ export default function SeguimientosPage() {
     }
   }, []);
 
+  useEffect(() => {
+    loadItems();
+  }, [loadItems]);
+
   const saveItems = (newItems: FollowUp[]) => {
     setItems(newItems);
     if (typeof window !== "undefined") {
@@ -51,19 +98,54 @@ export default function SeguimientosPage() {
     }
   };
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customer.trim() || !note.trim()) return;
 
+    const user = getUsuarioActual();
+    const orgId = getOrganizacionId() || user?.organizacionId;
     const now = new Date();
+    const fecha = now.toISOString().split("T")[0];
+    const hora = now.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
+
+    const payload = {
+      organizacionId: orgId || "default",
+      tipo: "RECORDATORIO",
+      titulo: `Seguimiento: ${customer.trim()} (${type})`,
+      clienteNombre: customer.trim(),
+      telefono: phone.trim() || undefined,
+      descripcion: note.trim(),
+      fecha,
+      hora,
+      prioridad: "MEDIA",
+      estado: "PENDIENTE",
+    };
+
+    let createdId = Date.now().toString();
+
+    if (orgId && typeof window !== "undefined" && navigator.onLine) {
+      try {
+        const res = await apiRequest<any>("/calendario", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        if (res?.id) createdId = res.id;
+      } catch (err) {
+        console.warn("Error enviando seguimiento al servidor, encolando offline:", err);
+        enqueueOfflineCalendario(orgId, "CREATE", payload);
+      }
+    } else if (orgId) {
+      enqueueOfflineCalendario(orgId, "CREATE", payload);
+    }
+
     const newItem: FollowUp = {
-      id: Date.now().toString(),
+      id: createdId,
       customer: customer.trim(),
       phone: phone.trim(),
       type,
       note: note.trim(),
       date: now.toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" }),
-      time: now.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }),
+      time: hora,
       status: "Pendiente",
     };
 
@@ -74,7 +156,7 @@ export default function SeguimientosPage() {
     setModalNuevo(false);
   };
 
-  const handleToggleStatus = (id: string) => {
+  const handleToggleStatus = async (id: string) => {
     const updated = items.map((it) => {
       if (it.id === id) {
         return {
@@ -85,6 +167,22 @@ export default function SeguimientosPage() {
       return it;
     });
     saveItems(updated);
+
+    const targetItem = updated.find((it) => it.id === id);
+    const nuevoEstado = targetItem?.status === "Completado" ? "COMPLETADO" : "PENDIENTE";
+    const user = getUsuarioActual();
+    const orgId = getOrganizacionId() || user?.organizacionId;
+
+    if (orgId && typeof window !== "undefined" && navigator.onLine && !id.startsWith("OFF-")) {
+      try {
+        await apiRequest(`/calendario/${id}`, {
+          method: "PUT",
+          body: JSON.stringify({ estado: nuevoEstado }),
+        });
+      } catch (err) {
+        console.warn("No se pudo actualizar estado en backend:", err);
+      }
+    }
   };
 
   const filteredItems = useMemo(() => {
@@ -245,7 +343,7 @@ export default function SeguimientosPage() {
                     item.status === "Completado" ? "opacity-60 bg-[#FAFAFA]" : ""
                   }`}
                 >
-                  <div className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-[#050505] font-bold text-white">
+                  <div className="flex h-12 w-12 flex-none items-center justify-center border border-black bg-[#050505] font-bold text-[#D8A814]">
                     {(item.customer || "C").charAt(0).toUpperCase()}
                   </div>
 

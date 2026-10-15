@@ -18,6 +18,7 @@ export interface PermisosEstructura {
     articulos: { ver: boolean; crear: boolean; editar: boolean; eliminar: boolean };
     stock: { ver: boolean; crear: boolean; editar: boolean; eliminar: boolean };
     promociones: { ver: boolean; crear: boolean; editar: boolean; eliminar: boolean };
+    calendario: { ver: boolean; crear: boolean; editar: boolean; eliminar: boolean };
     ventas: { ver: boolean; crear: boolean; editar: boolean; eliminar: boolean };
     caja: { ver: boolean; abrir: boolean; cerrar: boolean };
     tickets: { ver: boolean; cancelar: boolean; reimprimir: boolean };
@@ -73,6 +74,7 @@ export const PLANTILLA_PERMISOS_DEFAULT: PermisosEstructura = {
     articulos: { ver: true, crear: false, editar: false, eliminar: false },
     stock: { ver: false, crear: false, editar: false, eliminar: false },
     promociones: { ver: false, crear: false, editar: false, eliminar: false },
+    calendario: { ver: true, crear: true, editar: true, eliminar: false },
     ventas: { ver: true, crear: true, editar: false, eliminar: false },
     caja: { ver: true, abrir: false, cerrar: false },
     tickets: { ver: true, cancelar: false, reimprimir: true },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   CreditCard,
   Check,
@@ -21,6 +21,8 @@ import {
   ChevronRight,
   Lock,
 } from "lucide-react";
+import { apiRequest } from "@/services/api";
+import { getOrganizacionId } from "@/services/auth";
 
 interface PaymentMethod {
   id: string;
@@ -54,6 +56,26 @@ export default function SuscripcionesView() {
   const [billingCycle, setBillingCycle] = useState<"mensual" | "anual">("anual");
   const [activePlanId, setActivePlanId] = useState<string>("pro");
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(INITIAL_PAYMENT_METHODS);
+  const [subData, setSubData] = useState<any>(null);
+
+  useEffect(() => {
+    const orgId = getOrganizacionId();
+    if (orgId) {
+      apiRequest(`/suscripciones/organizacion/${orgId}`)
+        .then((data) => {
+          if (data) {
+            setSubData(data);
+            if (data.plan) {
+              const p = data.plan.toLowerCase();
+              if (p.includes("basico") || p.includes("básico")) setActivePlanId("basico");
+              else if (p.includes("enterprise")) setActivePlanId("enterprise");
+              else setActivePlanId("pro");
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   // Modales
   const [isAddCardOpen, setIsAddCardOpen] = useState(false);
@@ -129,10 +151,28 @@ export default function SuscripcionesView() {
     showToast(`Tarjeta ${brand.toUpperCase()} •••• ${last4} agregada con éxito.`);
   };
 
-  const handleConfirmPlanChange = () => {
+  const handleConfirmPlanChange = async () => {
     if (targetPlan) {
+      const orgId = getOrganizacionId();
       setActivePlanId(targetPlan.id);
       setIsUpgradeModalOpen(false);
+
+      if (orgId) {
+        try {
+          const updated = await apiRequest('/suscripciones/cambiar-plan', {
+            method: 'POST',
+            body: JSON.stringify({
+              organizacionId: orgId,
+              plan: targetPlan.name,
+              periodo: billingCycle,
+            }),
+          });
+          setSubData(updated);
+        } catch (e) {
+          console.warn('No se pudo persistir cambio de plan en backend:', e);
+        }
+      }
+
       showToast(`¡Felicidades! Tu suscripción ha sido actualizada a: ${targetPlan.name}.`);
     }
   };
@@ -281,7 +321,10 @@ export default function SuscripcionesView() {
                   <div>
                     <p className="text-xs uppercase text-[#888888]">Ciclo de facturación</p>
                     <p className="text-sm font-semibold text-white mt-0.5 flex items-center gap-1.5">
-                      <Calendar size={14} className="text-[#D8A814]" /> Renovación Anual (15 Nov 2026)
+                      <Calendar size={14} className="text-[#D8A814]" />
+                      {subData?.fechaFin
+                        ? `Vigente hasta ${new Date(subData.fechaFin).toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" })} (${subData.diasRestantes ?? 30} días restantes)`
+                        : "Plan Activo (Vigencia Anual)"}
                     </p>
                   </div>
 

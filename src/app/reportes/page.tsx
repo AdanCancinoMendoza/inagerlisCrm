@@ -54,9 +54,17 @@ export default function ReportesPage() {
 
     setLoading(true);
     try {
+      const sucursalParam =
+        sucursalFiltro && sucursalFiltro !== "Todas las sucursales"
+          ? `&sucursalId=${encodeURIComponent(sucursalFiltro)}`
+          : "";
+      const ventasEndpoint = `/ventas/organizacion/${orgId}?limit=1500${
+        fechaDesde ? `&desde=${fechaDesde}` : ""
+      }${fechaHasta ? `&hasta=${fechaHasta}` : ""}${sucursalParam}`;
+
       const [resumenRes, ventasRes, clientesRes, articulosRes, sucursalesRes] = await Promise.allSettled([
         apiRequest<any>(`/ventas/resumen/${orgId}`),
-        apiRequest<any[]>(`/ventas/organizacion/${orgId}`),
+        apiRequest<any[]>(ventasEndpoint),
         getClientes(orgId),
         apiRequest<any[]>(`/articulos?organizacionId=${orgId}`),
         apiRequest<any[]>(`/sucursales?organizacionId=${orgId}`),
@@ -72,7 +80,7 @@ export default function ReportesPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fechaDesde, fechaHasta, sucursalFiltro]);
 
   useEffect(() => {
     loadData();

@@ -15,7 +15,10 @@ import {
   UserRound,
   WalletCards,
   Zap,
+  WifiOff,
+  RefreshCw,
 } from "lucide-react";
+import { getOfflineSalesQueue, syncOfflineSales } from "@/services/offlineSync";
 
 interface POSHeaderProps {
   activeTab: "venta" | "caja" | "tickets" | "clientes" | "servicios" | "configuracion";
@@ -32,13 +35,44 @@ export default function POSHeader({
   const { isInstallable, isInstalled, installPwa } = usePwa();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [usuario, setUsuario] = useState<any>(null);
+  const [offlineCount, setOfflineCount] = useState(0);
+  const [isOnline, setIsOnline] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const u = getUsuarioActual();
       setUsuario(u);
+
+      setIsOnline(navigator.onLine);
+      setOfflineCount(getOfflineSalesQueue().length);
+
+      const updateOnline = () => setIsOnline(true);
+      const updateOffline = () => setIsOnline(false);
+      const updateQueue = () => setOfflineCount(getOfflineSalesQueue().length);
+
+      window.addEventListener("online", updateOnline);
+      window.addEventListener("offline", updateOffline);
+      window.addEventListener("offline_queue_updated", updateQueue);
+
+      return () => {
+        window.removeEventListener("online", updateOnline);
+        window.removeEventListener("offline", updateOffline);
+        window.removeEventListener("offline_queue_updated", updateQueue);
+      };
     }
   }, []);
+
+  const handleManualSync = async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    try {
+      await syncOfflineSales();
+      setOfflineCount(getOfflineSalesQueue().length);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const nombreUsuario = usuario?.nombre || "Usuario";
   const inicial = (nombreUsuario || "U").charAt(0).toUpperCase();
@@ -231,6 +265,26 @@ export default function POSHeader({
         </nav>
 
         <div className="ml-auto flex items-center gap-3">
+          {!isOnline && (
+            <div className="flex h-9 items-center gap-2 border border-red-600 bg-black px-3 text-xs font-bold uppercase tracking-wider text-red-400">
+              <WifiOff size={14} className="text-red-400" />
+              <span className="hidden md:inline">Sin Red (Offline)</span>
+            </div>
+          )}
+
+          {offlineCount > 0 && (
+            <button
+              type="button"
+              onClick={handleManualSync}
+              disabled={isSyncing}
+              title="Sincronizar ventas offline con el servidor"
+              className="flex h-9 items-center gap-2 border border-[#D8A814] bg-black px-3 text-xs font-bold uppercase tracking-wider text-[#D8A814] hover:bg-[#D8A814] hover:text-black transition-colors cursor-pointer"
+            >
+              <RefreshCw size={13} className={isSyncing ? "animate-spin" : ""} />
+              <span>{isSyncing ? "Subiendo..." : `${offlineCount} Offline`}</span>
+            </button>
+          )}
+
           <div className="border-r border-[#DDDDDD] pr-5 text-right">
             <p className="text-[10px] font-bold uppercase tracking-wider text-[#999999]">
               Venta

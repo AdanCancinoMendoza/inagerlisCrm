@@ -30,6 +30,7 @@ import { useSidebar } from "@/context/SidebarContext";
 
 import { apiRequest } from "@/services/api";
 import { getOrganizacionId, getUsuarioActual } from "@/services/auth";
+import { registrarCorteCaja } from "@/services/cajaService";
 
 interface MovimientoCaja {
   id: string;
@@ -184,18 +185,38 @@ export default function CajaPage() {
     setCajaAbierta(false);
     setModalCierre(false);
 
+    const diferencia = contado - totalEsperadoEfectivo;
+
     setMovimientos((prev) => [
       {
         id: Date.now().toString(),
         fecha: "Hoy",
         hora: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         tipo: "CIERRE",
-        concepto: `Cierre de caja - Contado: ${money(contado)} (Dif: ${money(contado - totalEsperadoEfectivo)})`,
+        concepto: `Cierre de caja - Contado: ${money(contado)} (Dif: ${money(diferencia)})`,
         monto: contado,
         usuario: usuarioActual?.nombre || "Cajero en turno",
       },
       ...prev,
     ]);
+
+    if (orgId) {
+      registrarCorteCaja(orgId, {
+        tipo: "FINAL",
+        nombreTerminal: "Caja Principal",
+        nombreUsuario: usuarioActual?.nombre || "Cajero en turno",
+        fondoInicial,
+        ventasEfectivo,
+        ventasTarjeta,
+        totalVentas: ventasEfectivo + ventasTarjeta,
+        entradasEfectivo,
+        retirosEfectivo,
+        efectivoEsperado: totalEsperadoEfectivo,
+        efectivoContado: contado,
+        diferencia,
+        totalTickets: 0,
+      }).catch(console.warn);
+    }
   };
 
   return (

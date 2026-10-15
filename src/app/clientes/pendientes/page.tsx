@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import { useSidebar } from "@/context/SidebarContext";
-import { CheckSquare, Plus, Check, Trash2, X } from "lucide-react";
+import { CheckSquare, Plus, Check, Trash2, X, Loader2 } from "lucide-react";
+import { apiRequest } from "@/services/api";
+import { getOrganizacionId, getUsuarioActual } from "@/services/auth";
+import { enqueueOfflineCalendario } from "@/services/calendarioSync";
 
 interface PendingItem {
   id: string;
@@ -20,14 +23,51 @@ export default function PendientesPage() {
   const [items, setItems] = useState<PendingItem[]>([]);
   const [activeTab, setActiveTab] = useState("Todos");
   const [modalNuevo, setModalNuevo] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Form states
   const [customer, setCustomer] = useState("");
   const [phone, setPhone] = useState("");
   const [note, setNote] = useState("");
 
-  // Persistir en localStorage
-  useEffect(() => {
+  const loadItems = useCallback(async () => {
+    const user = getUsuarioActual();
+    const orgId = getOrganizacionId() || user?.organizacionId;
+
+    if (!orgId) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      if (typeof window !== "undefined" && navigator.onLine) {
+        const data = await apiRequest<any[]>(`/calendario?organizacionId=${orgId}`);
+        if (Array.isArray(data)) {
+          const notas = data
+            .filter((ev) => ev.tipo === "NOTA" && ev.estado !== "COMPLETADO")
+            .map((ev) => ({
+              id: ev.id,
+              customer: ev.clienteNombre || ev.titulo || "Cliente",
+              phone: ev.telefono || "",
+              note: ev.descripcion || "",
+              date: ev.fecha,
+              time: ev.hora || "",
+            }));
+
+          setItems(notas);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("crm_clientes_pendientes", JSON.stringify(notas));
+          }
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn("Fallo al consultar pendientes del servidor, cargando local...", err);
+    } finally {
+      setLoading(false);
+    }
+
+    // Fallback a localStorage
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("crm_clientes_pendientes");
       if (saved) {
@@ -40,6 +80,10 @@ export default function PendientesPage() {
     }
   }, []);
 
+  useEffect(() => {
+    loadItems();
+  }, [loadItems]);
+
   const saveItems = (newItems: PendingItem[]) => {
     setItems(newItems);
     if (typeof window !== "undefined") {
@@ -47,18 +91,53 @@ export default function PendientesPage() {
     }
   };
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customer.trim() || !note.trim()) return;
 
+    const user = getUsuarioActual();
+    const orgId = getOrganizacionId() || user?.organizacionId;
     const now = new Date();
+    const fecha = now.toISOString().split("T")[0];
+    const hora = now.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
+
+    const payload = {
+      organizacionId: orgId || "default",
+      tipo: "NOTA",
+      titulo: `Pendiente: ${customer.trim()}`,
+      clienteNombre: customer.trim(),
+      telefono: phone.trim() || undefined,
+      descripcion: note.trim(),
+      fecha,
+      hora,
+      prioridad: "MEDIA",
+      estado: "PENDIENTE",
+    };
+
+    let createdId = Date.now().toString();
+
+    if (orgId && typeof window !== "undefined" && navigator.onLine) {
+      try {
+        const res = await apiRequest<any>("/calendario", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        if (res?.id) createdId = res.id;
+      } catch (err) {
+        console.warn("Error enviando pendiente al servidor, encolando offline:", err);
+        enqueueOfflineCalendario(orgId, "CREATE", payload);
+      }
+    } else if (orgId) {
+      enqueueOfflineCalendario(orgId, "CREATE", payload);
+    }
+
     const newItem: PendingItem = {
-      id: Date.now().toString(),
+      id: createdId,
       customer: customer.trim(),
       phone: phone.trim(),
       note: note.trim(),
       date: now.toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" }),
-      time: now.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }),
+      time: hora,
     };
 
     saveItems([newItem, ...items]);
@@ -68,8 +147,22 @@ export default function PendientesPage() {
     setModalNuevo(false);
   };
 
-  const handleComplete = (id: string) => {
+  const handleComplete = async (id: string) => {
     saveItems(items.filter((item) => item.id !== id));
+
+    const user = getUsuarioActual();
+    const orgId = getOrganizacionId() || user?.organizacionId;
+
+    if (orgId && typeof window !== "undefined" && navigator.onLine && !id.startsWith("OFF-")) {
+      try {
+        await apiRequest(`/calendario/${id}`, {
+          method: "PUT",
+          body: JSON.stringify({ estado: "COMPLETADO" }),
+        });
+      } catch (err) {
+        console.warn("No se pudo marcar completado en backend:", err);
+      }
+    }
   };
 
   return (

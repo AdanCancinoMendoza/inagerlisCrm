@@ -30,6 +30,14 @@ import { apiRequest } from "@/services/api";
 import { getOrganizacionId, getUsuarioActual, hasPosPermiso } from "@/services/auth";
 import { useSocket } from "@/hooks/useSocket";
 import { Cliente, getClientes, createCliente } from "@/services/clientes";
+import {
+  enqueueOfflineSale,
+  cacheProductsLocally,
+  getCachedProductsLocally,
+  syncOfflineSales,
+  getOfflineSalesQueue,
+} from "@/services/offlineSync";
+import { getConfiguracionFiscal, calcularImpuestoVenta } from "@/services/fiscal";
 
 type Product = {
   id: string | number;
@@ -85,6 +93,21 @@ export default function VentasPage() {
   // Alerta flotante de stock / límites en POS
   const [posAlert, setPosAlert] = useState<{ message: string; type: "error" | "warning" | "info" } | null>(null);
 
+  // Configuración fiscal e IVA dinámico
+  const [fiscalConfig, setFiscalConfig] = useState(() => getConfiguracionFiscal(orgId));
+
+  useEffect(() => {
+    const refreshFiscal = () => {
+      const activeOrg = getOrganizacionId() || getUsuarioActual()?.organizacionId;
+      if (activeOrg) {
+        setFiscalConfig(getConfiguracionFiscal(activeOrg));
+      }
+    };
+    refreshFiscal();
+    window.addEventListener("focus", refreshFiscal);
+    return () => window.removeEventListener("focus", refreshFiscal);
+  }, [orgId]);
+
   const showPosAlert = (message: string, type: "error" | "warning" | "info" = "warning") => {
     setPosAlert({ message, type });
     setTimeout(() => {
@@ -116,9 +139,16 @@ export default function VentasPage() {
           };
         });
         setProducts(mapped);
+        // Guardar catálogo en memoria local para ventas sin conexión
+        cacheProductsLocally(orgId, mapped);
       }
     } catch {
-      // Mantiene fallback si hay error de red
+      // Fallback a catálogo local offline si la red o el servidor fallan
+      const cached = getCachedProductsLocally(orgId);
+      if (cached && cached.length > 0) {
+        setProducts(cached);
+        showPosAlert(`Modo Offline: ${cached.length} artículos cargados desde memoria local`, "info");
+      }
     } finally {
       setLoadingProducts(false);
     }
@@ -144,6 +174,34 @@ export default function VentasPage() {
     loadOrgProducts();
     loadOrgClientes();
   }, [loadOrgClientes]);
+
+  // Auto-sincronización de ventas offline al volver la conexión y periódicamente
+  useEffect(() => {
+    const handleOnline = async () => {
+      showPosAlert("Conexión restablecida. Sincronizando ventas offline pendientes...", "info");
+      const res = await syncOfflineSales();
+      if (res.synced > 0) {
+        showPosAlert(`¡Sincronización exitosa! Se subieron ${res.synced} ventas pendientes al servidor.`, "info");
+      }
+    };
+
+    window.addEventListener("online", handleOnline);
+
+    const syncInterval = setInterval(() => {
+      if (typeof window !== "undefined" && navigator.onLine && getOfflineSalesQueue().length > 0) {
+        syncOfflineSales().then((res) => {
+          if (res.synced > 0) {
+            showPosAlert(`Se sincronizaron ${res.synced} ventas offline en segundo plano.`, "info");
+          }
+        });
+      }
+    }, 25000);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      clearInterval(syncInterval);
+    };
+  }, []);
 
   // Sincronización en tiempo real vía Socket.io para el POS
   useEffect(() => {
@@ -318,7 +376,7 @@ export default function VentasPage() {
       : 0;
 
   const subtotalNeto = Math.max(0, subtotalBruto - descuentoMonto);
-  const tax = subtotalNeto * 0.16;
+  const tax = calcularImpuestoVenta(subtotalNeto, fiscalConfig);
   const total = subtotalNeto + tax;
 
   const itemCount = cart.reduce(
@@ -400,16 +458,34 @@ export default function VentasPage() {
         })),
       };
 
-      const resultado = await apiRequest<any>("/ventas", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
+      // Si el navegador está sin internet, encolar offline de inmediato sin esperar error
+      if (typeof window !== "undefined" && !navigator.onLine) {
+        const resultadoOffline = enqueueOfflineSale(payload);
+        setLastSaleResult(resultadoOffline);
+        setPaymentSuccess(true);
+        showPosAlert("Sin conexión a red. Venta registrada en MODO OFFLINE con éxito.", "info");
+        return;
+      }
 
-      setLastSaleResult(resultado);
-      setPaymentSuccess(true);
+      try {
+        const resultado = await apiRequest<any>("/ventas", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+
+        setLastSaleResult(resultado);
+        setPaymentSuccess(true);
+      } catch (networkErr: any) {
+        // Si falló por servidor inalcanzable o corte de red repentino, encolar offline
+        console.warn("Falla de conexión con el servidor. Encolando venta offline...", networkErr);
+        const resultadoOffline = enqueueOfflineSale(payload);
+        setLastSaleResult(resultadoOffline);
+        setPaymentSuccess(true);
+        showPosAlert("Servidor inalcanzable. Venta registrada en MODO OFFLINE para sincronización automática.", "warning");
+      }
     } catch (err: any) {
       console.error("Error al procesar la venta:", err);
-      alert(err?.message || "Ocurrió un error al registrar la venta.");
+      showPosAlert(err?.message || "Ocurrió un error al registrar la venta.", "error");
     } finally {
       setProcessingPayment(false);
     }
@@ -433,8 +509,8 @@ export default function VentasPage() {
     return (
       <main className="min-h-screen bg-[#F7F7F7] flex flex-col items-center justify-center p-6 text-center">
         <div className="max-w-md border border-[#D8A814] bg-white p-8 shadow-xl">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-red-600 mb-4">
-            <ShieldAlert size={32} />
+          <div className="mx-auto flex h-14 w-14 items-center justify-center border border-red-200 bg-red-50 text-red-600 mb-4">
+            <ShieldAlert size={28} />
           </div>
           <h1 className="text-xl font-bold text-black">Acceso No Autorizado</h1>
           <p className="mt-2 text-sm text-[#666]">
@@ -686,7 +762,7 @@ export default function VentasPage() {
             {selectedCustomer ? (
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-black text-xs font-bold text-white shadow-xs">
+                  <div className="flex h-9 w-9 flex-none items-center justify-center border border-black bg-[#050505] text-xs font-bold text-[#D8A814]">
                     {selectedCustomer.nombre.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
@@ -697,13 +773,13 @@ export default function VentasPage() {
                       <UserCheck size={13} className="text-emerald-600 flex-none" />
                     </div>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="inline-flex items-center gap-0.5 text-[10px] text-[#B45309] bg-[#FFFBEB] px-1.5 py-0.2 rounded font-bold border border-[#FDE68A]">
-                        <Award size={10} />
+                      <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-black bg-[#F7F7F7] px-1.5 py-0.5 font-bold border border-[#E2E2E2]">
+                        <Award size={10} className="text-[#D8A814]" />
                         {selectedCustomer.puntos || 0} pts
                       </span>
                       {selectedCustomer.descuento > 0 && (
-                        <span className="inline-flex items-center gap-0.5 text-[10px] text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded font-bold border border-emerald-200">
-                          <Percent size={9} />
+                        <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-black bg-[#FFFDF5] px-1.5 py-0.5 font-bold border border-[#D8A814]">
+                          <Percent size={9} className="text-[#D8A814]" />
                           {selectedCustomer.descuento}% desc.
                         </span>
                       )}
@@ -730,8 +806,8 @@ export default function VentasPage() {
             ) : (
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs text-[#6B7280]">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#E5E7EB] text-[#4B5563]">
-                    <UserRound size={14} />
+                  <div className="flex h-7 w-7 items-center justify-center border border-[#E0E0E0] bg-[#F7F7F7] text-black">
+                    <UserRound size={13} />
                   </div>
                   <div>
                     <span className="font-semibold text-black block text-xs">Público General</span>
@@ -851,7 +927,7 @@ export default function VentasPage() {
               )}
 
               <div className="flex justify-between">
-                <span>IVA (16%)</span>
+                <span>{fiscalConfig?.ivaActivo ? `IVA (${fiscalConfig.porcentajeIva}%)` : "IVA (0% Exento)"}</span>
                 <span className="font-semibold text-[#111827]">{money(tax)}</span>
               </div>
 
@@ -1031,10 +1107,10 @@ export default function VentasPage() {
                     setSelectedCustomer(null);
                     setIsCustomerModalOpen(false);
                   }}
-                  className="mb-2 flex items-center justify-between rounded-xl border border-[#E5E7EB] bg-[#FAFAFA] p-3 text-left hover:border-black transition-all"
+                  className="mb-2 flex items-center justify-between border border-[#E5E7EB] bg-[#FAFAFA] p-3 text-left hover:border-black transition-all"
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E5E7EB] text-xs font-bold text-black">
+                    <div className="flex h-8 w-8 items-center justify-center border border-[#D5D5D5] bg-[#EEEEEE] text-xs font-bold text-black">
                       PG
                     </div>
                     <div>
@@ -1068,14 +1144,14 @@ export default function VentasPage() {
                             setSelectedCustomer(c);
                             setIsCustomerModalOpen(false);
                           }}
-                          className={`flex w-full items-center justify-between rounded-xl border p-3 text-left transition-all ${
+                          className={`flex w-full items-center justify-between border p-3 text-left transition-all ${
                             isSelected
-                              ? "border-2 border-[#D8A814] bg-[#FFFBEB]"
-                              : "border-[#EEEEEE] bg-white hover:border-[#D1D5DB] hover:bg-[#F9FAFB]"
+                              ? "border-2 border-[#D8A814] bg-[#FFFDF5]"
+                              : "border-[#EEEEEE] bg-white hover:border-[#999999] hover:bg-[#FAFAFA]"
                           }`}
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-black font-bold text-white text-xs">
+                            <div className="flex h-9 w-9 flex-none items-center justify-center border border-black bg-[#050505] font-bold text-[#D8A814] text-xs">
                               {c.nombre.charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0">

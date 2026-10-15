@@ -33,6 +33,7 @@ import { apiRequest } from "@/services/api";
 import { getOrganizacionId, getUsuarioActual, hasPosPermiso } from "@/services/auth";
 import { Cliente, getClientes, createCliente } from "@/services/clientes";
 import { useSocket } from "@/hooks/useSocket";
+import { getConfiguracionFiscal, calcularImpuestoVenta } from "@/services/fiscal";
 
 /* =========================================================
    TIPOS DE DATOS DEL TERMINAL
@@ -104,6 +105,22 @@ export default function TerminalVentas({
     text: string;
     type: "error" | "warning" | "success";
   } | null>(null);
+
+  // Configuración Fiscal e Impuestos Dinámicos
+  const [fiscalConfig, setFiscalConfig] = useState(() => getConfiguracionFiscal());
+
+  useEffect(() => {
+    const refreshFiscal = () => {
+      const usuario = getUsuarioActual();
+      const orgId = getOrganizacionId() || usuario?.organizacionId;
+      if (orgId) {
+        setFiscalConfig(getConfiguracionFiscal(orgId));
+      }
+    };
+    refreshFiscal();
+    window.addEventListener("focus", refreshFiscal);
+    return () => window.removeEventListener("focus", refreshFiscal);
+  }, []);
 
   const showAlert = (
     text: string,
@@ -353,7 +370,7 @@ export default function TerminalVentas({
   }, [subtotalBruto, descuentoPorcentaje]);
 
   const subtotalNeto = Math.max(0, subtotalBruto - descuentoMonto);
-  const impuestoIva = subtotalNeto * 0.16;
+  const impuestoIva = calcularImpuestoVenta(subtotalNeto, fiscalConfig);
   const total = subtotalNeto + impuestoIva;
 
   const totalArticulos = useMemo(() => {
@@ -981,7 +998,7 @@ export default function TerminalVentas({
               )}
 
               <div className="flex justify-between items-center">
-                <span>IVA (16%)</span>
+                <span>{fiscalConfig?.ivaActivo ? `IVA (${fiscalConfig.porcentajeIva}%)` : "IVA (0% Exento)"}</span>
                 <span className="font-semibold text-black font-mono">
                   {money(impuestoIva)}
                 </span>

@@ -18,6 +18,7 @@ import {
 
 import { apiRequest } from "@/services/api";
 import { getOrganizacionId, getUsuarioActual } from "@/services/auth";
+import { registrarCorteCaja } from "@/services/cajaService";
 
 interface MovimientoPOS {
   id: string;
@@ -141,8 +142,30 @@ export default function POSCajaPage() {
 
   const handleCerrarCaja = (e: React.FormEvent) => {
     e.preventDefault();
+    const contado = Number(conteoFisico) || 0;
+    const esperado = fondoInicial + ventasEfectivo + entradas - retiros;
+    const diferencia = contado - esperado;
+
     setCajaAbierta(false);
     setModalCierre(false);
+
+    if (orgId) {
+      registrarCorteCaja(orgId, {
+        tipo: "FINAL",
+        nombreTerminal: "Caja 02 (POS)",
+        nombreUsuario: usuario?.nombre || "Cajero POS",
+        fondoInicial,
+        ventasEfectivo,
+        ventasTarjeta,
+        totalVentas: ventasEfectivo + ventasTarjeta,
+        entradasEfectivo: entradas,
+        retirosEfectivo: retiros,
+        efectivoEsperado: esperado,
+        efectivoContado: contado,
+        diferencia,
+        totalTickets: 0,
+      }).catch(console.warn);
+    }
   };
 
   return (

@@ -30,28 +30,28 @@ export default function Header() {
   const inicial = nombreUsuario.charAt(0).toUpperCase();
 
   return (
-    <header className="flex h-24 items-center justify-between border-b border-[#E5E5E5] bg-white px-10">
+    <header className="flex h-24 items-center justify-between border-b border-[#E5E5E5] dark:border-[#262626] bg-white dark:bg-[#111111] px-10 transition-colors">
       <div className="flex items-center gap-4">
         <button
           onClick={toggleSidebar}
           title={collapsed ? "Desplegar menú" : "Ocultar menú"}
-          className="flex h-11 w-11 items-center justify-center border border-[#DDDDDD] bg-[#FAFAFA] text-black hover:border-[var(--primary)] hover:bg-white transition-all shadow-sm cursor-pointer"
+          className="flex h-11 w-11 items-center justify-center border border-[#DDDDDD] dark:border-[#333333] bg-[#FAFAFA] dark:bg-[#1A1A1A] text-black dark:text-white hover:border-[var(--primary)] transition-all shadow-sm cursor-pointer"
         >
           {collapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
         </button>
 
         <div>
-          <h1 className="text-2xl font-bold text-black">
+          <h1 className="text-2xl font-bold text-black dark:text-white">
             Hola, {nombreUsuario}
           </h1>
 
-          <p className="mt-1 text-sm text-[#777777]">
+          <p className="mt-1 text-sm text-[#777777] dark:text-[#999999]">
             {usuario?.organizacion?.nombre ? `${usuario.organizacion.nombre} · Resumen general` : "Aquí tienes el resumen de tu negocio."}
           </p>
         </div>
       </div>
 
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-4 sm:gap-6">
         {isInstallable && !isInstalled && (
           <button
             onClick={installPwa}

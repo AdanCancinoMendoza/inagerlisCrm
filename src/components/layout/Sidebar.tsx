@@ -21,18 +21,18 @@ import {
   UserRoundCog,
   ReceiptText,
   WalletCards,
-  PanelLeftClose,
-  PanelLeftOpen,
   CreditCard,
   LogOut,
   Download,
   BarChart3,
+  Building2,
+  CalendarDays,
 } from "lucide-react";
 
 export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { collapsed, toggleSidebar } = useSidebar();
+  const { collapsed } = useSidebar();
   const { isInstallable, isInstalled, installPwa } = usePwa();
 
   const [clientesOpen, setClientesOpen] = useState(
@@ -65,7 +65,7 @@ export default function Sidebar() {
     if (usuario.perfil?.esAdmin || usuario.rol === "ADMIN") return true;
     if (!usuario.perfil?.permisos?.modulos) return true;
     const m = (usuario.perfil.permisos.modulos as any)[mod];
-    return m ? Boolean(m.ver) : false;
+    return m !== undefined ? Boolean(m.ver) : true;
   };
 
   const goTo = (route: string) => {
@@ -85,8 +85,8 @@ export default function Sidebar() {
         collapsed ? "w-[80px]" : "w-[250px]"
       }`}
     >
-      {/* Logo y Botón Colapsar */}
-      <div className="flex h-24 shrink-0 items-center justify-between border-b border-[var(--dark-border)] px-4">
+      {/* Logo */}
+      <div className="flex h-24 shrink-0 items-center justify-center border-b border-[var(--dark-border)] px-4">
         {!collapsed ? (
           <Image
             src="/logo.png"
@@ -105,14 +105,6 @@ export default function Sidebar() {
             C
           </div>
         )}
-
-        <button
-          onClick={toggleSidebar}
-          title={collapsed ? "Desplegar menú" : "Ocultar menú"}
-          className="text-[#777777] hover:text-white transition-colors"
-        >
-          {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-        </button>
       </div>
 
       {/* Navegación */}
@@ -314,6 +306,28 @@ export default function Sidebar() {
           </button>
         )}
 
+        {/* Calendario (Pedidos y Recordatorios) */}
+        {canVer("calendario") && (
+          <button
+            onClick={() => goTo("/calendario")}
+            title="Calendario"
+            className={`
+              mt-2 flex h-12 w-full items-center
+              border-l-2 transition-colors
+              ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
+              text-sm font-medium
+              ${
+                pathname.startsWith("/calendario")
+                  ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
+                  : "border-transparent text-[#C5C5C5] hover:text-white"
+              }
+            `}
+          >
+            <CalendarDays size={18} strokeWidth={1.8} />
+            {!collapsed && <span>Calendario</span>}
+          </button>
+        )}
+
         {/* Usuarios y Perfiles */}
         {canVer("usuarios") && (
           <button
@@ -333,6 +347,28 @@ export default function Sidebar() {
           >
             <UserRoundCog size={18} strokeWidth={1.8} />
             {!collapsed && <span>Usuarios</span>}
+          </button>
+        )}
+
+        {/* Mi Organización (Sucursales y Terminales) */}
+        {canVer("configuracion") && (
+          <button
+            onClick={() => goTo("/organizacion")}
+            title="Mi Organización"
+            className={`
+              mt-2 flex h-12 w-full items-center
+              border-l-2 transition-colors
+              ${collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"}
+              text-sm font-medium
+              ${
+                pathname.startsWith("/organizacion") || pathname.startsWith("/mi-organizacion")
+                  ? "border-[var(--primary)] bg-[#141414] text-[var(--primary)]"
+                  : "border-transparent text-[#C5C5C5] hover:text-white"
+              }
+            `}
+          >
+            <Building2 size={18} strokeWidth={1.8} />
+            {!collapsed && <span>Mi Organización</span>}
           </button>
         )}
 
