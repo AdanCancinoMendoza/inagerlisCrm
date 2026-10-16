@@ -240,13 +240,13 @@ export default function ProveedoresPage() {
         <Sidebar />
 
         <div
-          className={`flex flex-1 flex-col transition-all duration-300 ${
+          className={`flex flex-1 flex-col w-full max-w-full overflow-x-hidden min-w-0 transition-all duration-300 ${
             collapsed ? "ml-0 lg:ml-[80px]" : "ml-0 lg:ml-[250px]"
           }`}
         >
           <Header />
 
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6">
+          <main className="flex-1 p-3 sm:p-6 lg:p-8 space-y-6 w-full max-w-full">
             {/* Banner Offline */}
             {isOffline && (
               <div className="flex items-center gap-3 border border-amber-300 bg-amber-50 p-4 text-xs font-semibold text-amber-900">

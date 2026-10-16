@@ -90,7 +90,7 @@ export default function CajaPage() {
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("venta:creada", (data: any) => {
+    const handleVentaCreada = (data: any) => {
       const totalVenta = Number(data.total) || 0;
       const metodo = data.metodoPago || "Efectivo";
 
@@ -114,10 +114,44 @@ export default function CajaPage() {
 
       setNotificacion(`¡Venta recibida por ${metodo}: $${totalVenta.toFixed(2)}!`);
       setTimeout(() => setNotificacion(null), 4000);
-    });
+    };
+
+    const handleCorteCaja = (corte: any) => {
+      if (corte) {
+        setMovimientos((prev) => [
+          {
+            id: corte.id || Date.now().toString(),
+            fecha: "Hoy",
+            hora: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            tipo: "CIERRE",
+            concepto: `Corte ${corte.tipo || "FINAL"} registrado - Total: $${Number(corte.totalVentas || 0).toFixed(2)}`,
+            monto: Number(corte.efectivoContado || 0),
+            usuario: corte.nombreUsuario || "Cajero",
+          },
+          ...prev,
+        ]);
+        setNotificacion(`Nuevo corte de caja registrado: ${corte.tipo || "FINAL"}`);
+        setTimeout(() => setNotificacion(null), 4000);
+      }
+    };
+
+    const handleCajaEstado = (data: any) => {
+      if (data?.estado === "Abierta") {
+        setCajaAbierta(true);
+        if (data.fondoInicial !== undefined) setFondoInicial(Number(data.fondoInicial) || 0);
+      } else if (data?.estado === "Cerrada") {
+        setCajaAbierta(false);
+      }
+    };
+
+    socket.on("venta:creada", handleVentaCreada);
+    socket.on("caja:corte", handleCorteCaja);
+    socket.on("caja:estado", handleCajaEstado);
 
     return () => {
-      socket.off("venta:creada");
+      socket.off("venta:creada", handleVentaCreada);
+      socket.off("caja:corte", handleCorteCaja);
+      socket.off("caja:estado", handleCajaEstado);
     };
   }, [socket]);
 
@@ -220,13 +254,13 @@ export default function CajaPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#F7F7F7]">
+    <main className="min-h-screen bg-[#F7F7F7] w-full max-w-full overflow-x-hidden">
       <Sidebar />
 
-      <div className={`min-h-screen transition-all duration-300 ${collapsed ? "ml-0 lg:ml-[80px]" : "ml-0 lg:ml-[250px]"}`}>
+      <div className={`min-h-screen w-full max-w-full overflow-x-hidden min-w-0 transition-all duration-300 ${collapsed ? "ml-0 lg:ml-[80px]" : "ml-0 lg:ml-[250px]"}`}>
         <Header />
 
-        <div className="p-4 sm:p-6 lg:p-8">
+        <div className="p-3 sm:p-6 lg:p-8 w-full max-w-full">
           {notificacion && (
             <div className="mb-6 flex items-center justify-between border-l-4 border-l-[#D8A814] bg-white p-4 shadow-md">
               <div className="flex items-center gap-3">

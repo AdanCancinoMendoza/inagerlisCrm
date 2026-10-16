@@ -576,8 +576,8 @@ export default function VentasPage() {
         <section className="flex flex-col min-w-0 border-r border-[#E2E2E2] bg-[#F9FAFB] p-6 overflow-hidden">
           {/* Barra de Búsqueda y Código de Barras */}
           <div className="flex-none">
-            <div className="flex gap-3">
-              <div className="flex h-12 flex-1 items-center rounded-xl border border-[#E5E7EB] bg-white px-4 shadow-sm focus-within:border-black focus-within:ring-1 focus-within:ring-black">
+            <div className="flex gap-2.5">
+              <div className="flex h-12 flex-1 items-center border border-[#E5E5E5] bg-white px-4 shadow-2xs focus-within:border-[#D8A814]">
                 <Barcode size={22} className="mr-3 text-[#9CA3AF] flex-none" />
 
                 <input
@@ -589,13 +589,13 @@ export default function VentasPage() {
                   className="h-full min-w-0 flex-1 bg-transparent text-sm text-black outline-none placeholder:text-[#9CA3AF]"
                 />
 
-                <span className="ml-2 rounded bg-[#F3F4F6] px-2 py-0.5 text-[10px] font-bold text-[#6B7280]">
+                <span className="ml-2 border border-[#E0E0E0] bg-[#F7F7F7] px-2 py-0.5 text-[9px] font-mono font-bold tracking-wider text-[#666666]">
                   ENTER
                 </span>
               </div>
 
-              <button className="flex h-12 w-12 flex-none items-center justify-center rounded-xl border border-[#E5E7EB] bg-white text-[#4B5563] shadow-sm hover:border-black hover:text-black">
-                <Search size={19} />
+              <button className="flex h-12 w-12 flex-none items-center justify-center border border-[#E5E5E5] bg-white text-[#555555] shadow-2xs hover:border-[#D8A814] hover:text-[#D8A814] transition-colors cursor-pointer">
+                <Search size={18} />
               </button>
             </div>
           </div>
@@ -607,11 +607,11 @@ export default function VentasPage() {
                 key={family}
                 onClick={() => setSelectedFamily(family)}
                 className={`
-                  h-9 whitespace-nowrap rounded-lg px-4 text-xs font-bold transition-all
+                  h-9 whitespace-nowrap px-4 text-xs font-bold uppercase tracking-[0.14em] transition-all cursor-pointer
                   ${
                     selectedFamily === family
-                      ? "bg-black text-white shadow-sm"
-                      : "border border-[#E5E7EB] bg-white text-[#4B5563] hover:border-[#9CA3AF] hover:text-black"
+                      ? "border border-[#D8A814] bg-[#050505] text-[#D8A814] shadow-sm"
+                      : "border border-[#E5E5E5] bg-white text-[#555555] hover:border-black hover:text-black"
                   }
                 `}
               >
@@ -622,108 +622,79 @@ export default function VentasPage() {
 
           {/* Encabezado del Catálogo */}
           <div className="mb-3 mt-4 flex-none flex items-center justify-between">
-            <h1 className="text-base font-bold text-black">
+            <h1 className="text-sm font-bold uppercase tracking-[0.14em] text-black">
               Productos ({filteredProducts.length})
             </h1>
-            <span className="text-xs text-[#6B7280]">Selecciona para agregar a la orden</span>
+            <span className="text-[11px] uppercase tracking-[0.12em] text-[#777777]">
+              Selecciona para agregar a la orden
+            </span>
           </div>
 
-          {/* Grid de Productos Adaptativo */}
+          {/* Grid de Productos Adaptativo - Imágenes Prominentes */}
           <div className="flex-1 overflow-y-auto pr-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-[#D1D5DB]">
             {loadingProducts ? (
               <div className="flex flex-col items-center justify-center p-16 text-center">
-                <Package size={36} className="animate-bounce text-[var(--primary)] mb-2" />
+                <Package size={36} className="animate-bounce text-[#D8A814] mb-2" />
                 <p className="text-xs font-bold text-gray-600">Cargando catálogo de artículos...</p>
               </div>
             ) : filteredProducts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-[#DDD] bg-white rounded-xl">
+              <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-[#DDD] bg-white">
                 <Package size={40} className="text-[#BBB] mb-3" />
-                <p className="font-bold text-black text-sm">No hay artículos disponibles</p>
+                <p className="font-bold text-black text-sm uppercase tracking-[0.12em]">No hay artículos disponibles</p>
                 <p className="text-xs text-[#777] mt-1 max-w-sm">
                   No se encontraron artículos registrados para esta organización o filtro de búsqueda.
                 </p>
                 <button
                   onClick={() => router.push("/articulos")}
-                  className="mt-4 px-4 py-2 bg-black text-white text-xs font-bold hover:bg-[var(--primary)] transition-colors rounded"
+                  className="mt-4 px-4 py-2 border border-[#D8A814] bg-[#050505] text-[#D8A814] text-xs font-bold uppercase tracking-[0.14em] hover:bg-[#D8A814] hover:text-black transition-colors cursor-pointer"
                 >
                   Registrar artículos en catálogo
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 pb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5 gap-3.5 pb-6">
                 {filteredProducts.map((product) => {
-                  const isOutOfStock = !product.stockIlimitado && product.stock <= 0;
-                  const isLowStock = !product.stockIlimitado && product.stock > 0 && product.stock <= product.stockMinimo;
-
                   return (
                     <button
                       key={product.id}
                       onClick={() => addProduct(product)}
-                      className={`group relative flex flex-col justify-between rounded-xl border p-3.5 text-left shadow-xs transition-all ${
-                        isOutOfStock
-                          ? "border-red-200 bg-red-50/20 opacity-75 hover:border-red-400 cursor-not-allowed"
-                          : "border-[#E5E7EB] bg-white hover:border-[var(--primary)] hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
-                      }`}
+                      className="group relative flex flex-col justify-between border border-[#E5E5E5] bg-white text-left transition-all hover:border-[#D8A814] hover:shadow-md active:scale-[0.98] cursor-pointer overflow-hidden"
                     >
-                      {/* Header de Tarjeta / Imagen y Badges */}
-                      <div className="flex items-start justify-between gap-1">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--primary-light)] text-[var(--primary)] group-hover:scale-105 transition-transform overflow-hidden border border-[#EEEEEE]">
-                          {product.image ? (
-                            <img
-                              src={product.image}
-                              alt={product.name}
-                              className="h-full w-full object-contain p-0.5"
-                              onError={(e) => {
-                                (e.target as HTMLElement).style.display = "none";
-                              }}
-                            />
-                          ) : (
-                            <Package size={18} />
-                          )}
-                        </div>
-
-                        {product.stockIlimitado ? (
-                          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[9px] font-extrabold bg-purple-50 text-purple-700 border border-purple-200">
-                            ♾️ Ilimitado
-                          </span>
-                        ) : isOutOfStock ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-extrabold bg-red-100 text-red-700 border border-red-300">
-                            AGOTADO
-                          </span>
-                        ) : isLowStock ? (
-                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300">
-                            ⚠️ {product.stock} disp.
-                          </span>
+                      {/* ÁREA DE IMAGEN PROMINENTE */}
+                      <div className="relative flex h-36 sm:h-40 w-full items-center justify-center bg-[#FAFAFA] p-3 border-b border-[#F0F0F0] overflow-hidden group-hover:bg-white transition-colors">
+                        {product.image ? (
+                          <img
+                            src={product.image}
+                            alt={product.name}
+                            className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = "none";
+                            }}
+                          />
                         ) : (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold text-gray-500 bg-gray-100">
-                            {product.stock} disp.
-                          </span>
+                          <div className="flex flex-col items-center justify-center text-[#B5B5B5] gap-1.5">
+                            <Package size={34} strokeWidth={1.5} className="group-hover:text-[#D8A814] transition-colors" />
+                            <span className="text-[10px] font-mono tracking-wider text-[#999999]">
+                              {product.code || "SKU"}
+                            </span>
+                          </div>
                         )}
                       </div>
 
-                      <div className="mt-2.5">
-                        <p className="line-clamp-2 text-xs font-bold text-[#111827] leading-tight">
+                      {/* DATOS DEL PRODUCTO: SIN STOCK, SIN FAMILIA */}
+                      <div className="flex flex-1 flex-col justify-between p-3">
+                        <p className="line-clamp-2 text-xs sm:text-sm font-bold text-[#111827] leading-tight group-hover:text-black transition-colors min-h-[2.4rem]">
                           {product.name}
                         </p>
-                        <div className="mt-1 flex items-center justify-between text-[10px]">
-                          <span className="font-medium text-[#9CA3AF] truncate">
-                            {product.family}
-                          </span>
-                          {isLowStock && (
-                            <span className="font-bold text-amber-700 text-[9px]">
-                              ¡Stock bajo!
-                            </span>
-                          )}
-                        </div>
-                      </div>
 
-                      <div className="mt-2.5 border-t border-[#F3F4F6] pt-2 flex items-center justify-between">
-                        <span className="text-[10px] text-[#6B7280] font-mono">
-                          {product.code}
-                        </span>
-                        <span className="text-sm font-bold text-[var(--primary)] font-mono">
-                          {money(product.price)}
-                        </span>
+                        <div className="mt-2.5 flex items-baseline justify-between border-t border-[#F2F2F2] pt-2">
+                          <span className="text-[10px] font-mono text-[#888888] tracking-wider truncate max-w-[85px]">
+                            {product.code}
+                          </span>
+                          <span className="text-sm sm:text-base font-extrabold font-mono text-[#D8A814] tracking-tight">
+                            {money(product.price)}
+                          </span>
+                        </div>
                       </div>
                     </button>
                   );
@@ -817,7 +788,7 @@ export default function VentasPage() {
 
                 <button
                   onClick={() => setIsCustomerModalOpen(true)}
-                  className="inline-flex items-center gap-1 rounded-lg border border-[#D8A814] bg-white px-2.5 py-1 text-xs font-bold text-[#D8A814] shadow-2xs hover:bg-[#D8A814] hover:text-white transition-all"
+                  className="inline-flex items-center gap-1.5 border border-[#D8A814] bg-white px-2.5 py-1 text-xs font-bold uppercase tracking-[0.12em] text-[#D8A814] hover:bg-[#D8A814] hover:text-black transition-all cursor-pointer"
                 >
                   <UserPlus size={12} />
                   Vincular cliente
@@ -830,10 +801,10 @@ export default function VentasPage() {
           <div className="flex-1 overflow-y-auto px-5 py-3 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-[#D1D5DB]">
             {cart.length === 0 ? (
               <div className="flex h-full min-h-[220px] flex-col items-center justify-center text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--primary-light)] text-[var(--primary)] mb-3 shadow-xs">
+                <div className="flex h-14 w-14 items-center justify-center border border-[#E5E5E5] bg-[#FAFAFA] text-[#D8A814] mb-3 shadow-2xs">
                   <ShoppingCart size={24} />
                 </div>
-                <h3 className="text-sm font-bold text-[#111827]">El carrito está vacío</h3>
+                <h3 className="text-sm font-bold uppercase tracking-[0.12em] text-[#111827]">El carrito está vacío</h3>
                 <p className="mt-1 max-w-[200px] text-xs leading-relaxed text-[#6B7280]">
                   Toca productos del catálogo para comenzar la venta
                 </p>
@@ -843,7 +814,7 @@ export default function VentasPage() {
                 {cart.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between rounded-xl border border-[#F3F4F6] bg-[#FAFAFA] p-2.5 transition-all hover:bg-white hover:shadow-xs"
+                    className="flex items-center justify-between border border-[#EBEBEB] bg-[#FAFAFA] p-2.5 transition-all hover:bg-white hover:border-[#D8A814]/50 hover:shadow-2xs"
                   >
                     <div className="min-w-0 flex-1 pr-2">
                       <p className="truncate text-xs font-bold text-[#111827]">
@@ -851,21 +822,11 @@ export default function VentasPage() {
                       </p>
                       <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-[#6B7280]">
                         <span>{money(item.price)} c/u</span>
-                        {!item.stockIlimitado && item.stock <= item.stockMinimo && (
-                          <span className="text-[10px] text-amber-700 font-bold bg-amber-50 px-1 rounded">
-                            (Stock: {item.stock})
-                          </span>
-                        )}
-                        {item.stockIlimitado && (
-                          <span className="text-[10px] text-purple-700 font-bold bg-purple-50 px-1 rounded">
-                            (♾️ Ilimitado)
-                          </span>
-                        )}
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <div className="flex h-7 items-center rounded-lg border border-[#E5E7EB] bg-white">
+                      <div className="flex h-7 items-center border border-[#E0E0E0] bg-white">
                         <button
                           onClick={() => changeQuantity(item.id, -1)}
                           className="flex h-full w-6 items-center justify-center text-[#6B7280] hover:text-black cursor-pointer"
@@ -889,13 +850,13 @@ export default function VentasPage() {
                         </button>
                       </div>
 
-                      <span className="min-w-[45px] text-right text-xs font-bold text-black font-mono">
+                      <span className="min-w-[45px] text-right text-xs font-bold text-[#D8A814] font-mono">
                         {money(item.price * item.quantity)}
                       </span>
 
                       <button
                         onClick={() => removeProduct(item.id)}
-                        className="ml-0.5 text-[#9CA3AF] hover:text-[#EF4444] cursor-pointer"
+                        className="ml-0.5 text-[#9CA3AF] hover:text-[#EF4444] cursor-pointer p-0.5"
                       >
                         <Trash2 size={13} />
                       </button>
@@ -917,7 +878,7 @@ export default function VentasPage() {
 
               {/* Descuento por Cliente */}
               {descuentoMonto > 0 && (
-                <div className="flex justify-between text-emerald-600 font-semibold bg-emerald-50 px-2 py-1 rounded">
+                <div className="flex justify-between text-emerald-600 font-semibold bg-emerald-50 px-2 py-1 border border-emerald-200">
                   <span className="flex items-center gap-1">
                     <Percent size={11} />
                     Descuento cliente ({clienteDescuentoPorcentaje}%)
@@ -944,8 +905,8 @@ export default function VentasPage() {
 
             {/* Total Destacado */}
             <div className="flex items-center justify-between border-t border-[#F3F4F6] pt-2">
-              <span className="text-sm font-bold text-[#111827]">Total Pagar</span>
-              <span className="text-2xl font-bold text-[var(--primary)]">
+              <span className="text-sm font-bold uppercase tracking-[0.14em] text-[#111827]">Total Pagar</span>
+              <span className="text-2xl font-extrabold font-mono text-[#D8A814]">
                 {money(total)}
               </span>
             </div>
@@ -955,13 +916,14 @@ export default function VentasPage() {
               disabled={cart.length === 0}
               onClick={() => setIsPaymentModalOpen(true)}
               className="
-                flex h-12 w-full items-center justify-center rounded-xl
-                bg-[var(--primary)] text-sm font-bold text-white
-                shadow-sm transition-all hover:bg-[var(--primary-hover)]
-                disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none
+                flex h-12 w-full items-center justify-center gap-2
+                border border-[#D8A814] bg-[#050505] text-xs font-bold uppercase tracking-[0.16em] text-[#D8A814]
+                shadow-sm transition-all hover:bg-[#D8A814] hover:text-black
+                disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-[#050505] disabled:hover:text-[#D8A814] cursor-pointer
               "
             >
-              Cobrar {cart.length > 0 ? money(total) : ""}
+              <span>Cobrar {cart.length > 0 ? money(total) : ""}</span>
+              <ArrowRight size={15} />
             </button>
           </div>
         </aside>

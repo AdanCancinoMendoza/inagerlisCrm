@@ -93,13 +93,9 @@ export default function Sidebar() {
       )}
 
       <aside
-        className={`sidebar-nav no-scrollbar fixed left-0 top-0 z-50 flex h-screen flex-col bg-[var(--dark-bg)] text-white transition-all duration-300 ease-in-out
-          ${/* Mobile: Drawer off-canvas */ ""}
-          ${mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"}
-          ${/* Desktop: Ancho dinámico según collapsed */ ""}
-          ${collapsed ? "lg:w-[80px]" : "lg:w-[250px]"}
-          w-[270px]
-        `}
+        className={`sidebar-nav no-scrollbar fixed left-0 top-0 z-50 flex h-screen flex-col bg-[var(--dark-bg)] text-white transition-all duration-300 ease-in-out w-[270px] max-w-[85vw] ${
+          mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
+        } ${collapsed ? "lg:w-[80px]" : "lg:w-[250px]"}`}
       >
         {/* Cabecera con Logo y Botón de Cerrar en Móviles */}
         <div className="flex h-16 sm:h-20 lg:h-24 shrink-0 items-center justify-between border-b border-[var(--dark-border)] px-4">

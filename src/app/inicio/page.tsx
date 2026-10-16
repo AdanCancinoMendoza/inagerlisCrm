@@ -16,12 +16,14 @@ import { getOrganizacionId, getUsuarioActual } from "@/services/auth";
 import { getClientes, Cliente } from "@/services/clientes";
 import { enqueueOfflineCalendario, syncOfflineCalendario } from "@/services/calendarioSync";
 import { getResumenVentasYCortesDia, ResumenDiaVentasYCortes } from "@/services/cajaService";
-import { Clock, CalendarDays, CalendarRange, RefreshCw } from "lucide-react";
+import { Clock, CalendarDays, CalendarRange, RefreshCw, Wifi, WifiOff } from "lucide-react";
+import { useSocket } from "@/hooks/useSocket";
 
 type Periodo = "dia" | "semana" | "mes";
 
 export default function InicioPage() {
   const { collapsed } = useSidebar();
+  const { socket, connected: socketConnected } = useSocket();
 
   const [loading, setLoading] = useState(true);
   const [periodo, setPeriodo] = useState<Periodo>("dia");
@@ -103,6 +105,42 @@ export default function InicioPage() {
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
+
+  // Actualización en tiempo real vía WebSockets con debounce optimizado
+  useEffect(() => {
+    if (!socket) return;
+
+    let debounceTimer: NodeJS.Timeout | null = null;
+    const triggerRefresh = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        loadDashboardData(true);
+      }, 400);
+    };
+
+    socket.on("venta:creada", triggerRefresh);
+    socket.on("caja:corte", triggerRefresh);
+    socket.on("caja:estado", triggerRefresh);
+    socket.on("cliente:creado", triggerRefresh);
+    socket.on("cliente:actualizado", triggerRefresh);
+    socket.on("cita:creada", triggerRefresh);
+    socket.on("cita:actualizada", triggerRefresh);
+    socket.on("cita:eliminada", triggerRefresh);
+    socket.on("stock:actualizado", triggerRefresh);
+
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      socket.off("venta:creada", triggerRefresh);
+      socket.off("caja:corte", triggerRefresh);
+      socket.off("caja:estado", triggerRefresh);
+      socket.off("cliente:creado", triggerRefresh);
+      socket.off("cliente:actualizado", triggerRefresh);
+      socket.off("cita:creada", triggerRefresh);
+      socket.off("cita:actualizada", triggerRefresh);
+      socket.off("cita:eliminada", triggerRefresh);
+      socket.off("stock:actualizado", triggerRefresh);
+    };
+  }, [socket, loadDashboardData]);
 
   // Detector de cambio de día automático (ej. al pasar las 12:00 AM) y refresco periódico
   useEffect(() => {
@@ -442,69 +480,69 @@ export default function InicioPage() {
     `$${val.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
-    <main className="min-h-screen bg-[#F7F7F7]">
+    <main className="min-h-screen bg-[#F7F7F7] w-full max-w-full overflow-x-hidden">
       <Sidebar />
 
       <div
-        className={`min-h-screen transition-all duration-300 ${
+        className={`min-h-screen w-full max-w-full overflow-x-hidden min-w-0 transition-all duration-300 ${
           collapsed ? "ml-0 lg:ml-[80px]" : "ml-0 lg:ml-[250px]"
         }`}
       >
         <Header />
 
-        <div className="p-4 sm:p-6 lg:p-8">
+        <div className="p-3 sm:p-6 lg:p-8 w-full max-w-full">
           {/* Cabecera del Dashboard con Selector de Periodo */}
-          <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#D8A814]">
                 Dashboard
               </p>
 
-              <h2 className="mt-2 text-2xl font-bold text-black">
+              <h2 className="mt-1 text-xl sm:text-2xl font-bold text-black">
                 {dateRange.title}
               </h2>
             </div>
 
-            {/* Pestañas: Día, Semana, Mes */}
-            <div className="flex items-center gap-2">
-              <div className="flex border border-[#E0E0E0] bg-white shadow-sm">
+            {/* Pestañas: Día, Semana, Mes (Responsive) */}
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="grid grid-cols-3 sm:flex border border-[#E0E0E0] bg-white shadow-xs w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setPeriodo("dia")}
-                  className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+                  className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
                     periodo === "dia"
                       ? "bg-black text-[#D8A814]"
                       : "bg-white text-[#777777] hover:bg-[#FAFAFA] hover:text-black"
                   }`}
                 >
-                  <Clock size={14} />
+                  <Clock size={13} className="shrink-0" />
                   <span>Hoy</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setPeriodo("semana")}
-                  className={`flex items-center gap-2 border-l border-[#E0E0E0] px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+                  className={`flex items-center justify-center gap-1.5 border-l border-[#E0E0E0] px-2.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
                     periodo === "semana"
                       ? "bg-black text-[#D8A814]"
                       : "bg-white text-[#777777] hover:bg-[#FAFAFA] hover:text-black"
                   }`}
                 >
-                  <CalendarDays size={14} />
-                  <span>Esta semana</span>
+                  <CalendarDays size={13} className="shrink-0" />
+                  <span className="truncate">Semana</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setPeriodo("mes")}
-                  className={`flex items-center gap-2 border-l border-[#E0E0E0] px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+                  className={`flex items-center justify-center gap-1.5 border-l border-[#E0E0E0] px-2.5 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
                     periodo === "mes"
                       ? "bg-black text-[#D8A814]"
                       : "bg-white text-[#777777] hover:bg-[#FAFAFA] hover:text-black"
                   }`}
                 >
-                  <CalendarRange size={14} />
-                  <span>Este mes</span>
+                  <CalendarRange size={13} className="shrink-0" />
+                  <span className="truncate">Mes</span>
                 </button>
               </div>
 
@@ -513,7 +551,7 @@ export default function InicioPage() {
                 onClick={() => loadDashboardData()}
                 title="Actualizar datos"
                 disabled={loading}
-                className="flex h-[38px] w-[38px] items-center justify-center border border-[#E0E0E0] bg-white text-[#777777] shadow-sm transition-colors hover:border-black hover:text-black cursor-pointer"
+                className="flex h-[36px] w-[36px] sm:h-[38px] sm:w-[38px] shrink-0 items-center justify-center border border-[#E0E0E0] bg-white text-[#777777] shadow-xs transition-colors hover:border-black hover:text-black cursor-pointer active:scale-95"
               >
                 <RefreshCw
                   size={14}
@@ -524,7 +562,7 @@ export default function InicioPage() {
           </div>
 
           {/* Métricas Reales */}
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
             <MetricCard
               title={dateRange.salesTitle}
               value={money(computedData.ventasTotal)}

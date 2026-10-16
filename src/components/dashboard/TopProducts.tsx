@@ -12,19 +12,19 @@ interface TopProductsProps {
 
 export default function TopProducts({ products = [] }: TopProductsProps) {
   return (
-    <section className="border border-[#E2E2E2] bg-white p-7">
-      <div className="mb-7 flex items-center justify-between">
+    <section className="border border-[#E2E2E2] bg-white p-4 sm:p-6 lg:p-7">
+      <div className="mb-5 sm:mb-7 flex items-center justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#D8A814]">
             Productos
           </p>
 
-          <h2 className="mt-1 text-xl font-bold text-black">
+          <h2 className="mt-1 text-lg sm:text-xl font-bold text-black">
             Más vendidos
           </h2>
         </div>
 
-        <Link href="/articulos" className="text-sm font-semibold text-[#D8A814] hover:underline">
+        <Link href="/articulos" className="text-xs sm:text-sm font-semibold text-[#D8A814] hover:underline">
           Ver todos
         </Link>
       </div>
@@ -37,16 +37,17 @@ export default function TopProducts({ products = [] }: TopProductsProps) {
               className="
                 flex items-center justify-between
                 border-b border-[#EEEEEE]
-                py-4
+                py-3 sm:py-4
                 last:border-none
+                gap-3
               "
             >
-              <div className="flex items-center gap-4">
-                <span className="w-6 text-sm font-bold text-[#C0C0C0]">
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                <span className="w-5 sm:w-6 text-xs sm:text-sm font-bold text-[#C0C0C0] shrink-0">
                   {String(index + 1).padStart(2, "0")}
                 </span>
 
-                <p className="font-medium text-black">
+                <p className="font-medium text-black text-sm truncate">
                   {product.name}
                 </p>
               </div>

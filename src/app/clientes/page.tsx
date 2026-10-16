@@ -168,17 +168,17 @@ export default function ClientesPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#F7F7F7]">
+    <main className="min-h-screen bg-[#F7F7F7] w-full max-w-full overflow-x-hidden">
       <Sidebar />
 
       <div
-        className={`min-h-screen transition-all duration-300 ${
+        className={`min-h-screen w-full max-w-full overflow-x-hidden min-w-0 transition-all duration-300 ${
           collapsed ? "ml-0 lg:ml-[80px]" : "ml-0 lg:ml-[250px]"
         }`}
       >
         <Header />
 
-        <div className="p-4 sm:p-6 lg:p-8">
+        <div className="p-3 sm:p-6 lg:p-8 w-full max-w-full">
           {/* Header de la sección */}
           <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>

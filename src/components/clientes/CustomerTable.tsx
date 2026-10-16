@@ -18,8 +18,8 @@ export default function CustomerTable({
 }: CustomerTableProps) {
   if (customers.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[260px] border border-[#E5E5E5] bg-white p-8 text-center rounded-xl">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFFBEB] text-[#D8A814] mb-3">
+      <div className="flex flex-col items-center justify-center min-h-[260px] border border-[#E5E5E5] bg-white p-8 text-center">
+        <div className="flex h-14 w-14 items-center justify-center border border-[#D8A814]/30 bg-[#FFFBEB] text-[#D8A814] mb-3">
           <ShoppingBag size={26} />
         </div>
         <p className="font-bold text-black text-base">No hay clientes registrados todavía</p>
@@ -34,7 +34,7 @@ export default function CustomerTable({
     <div className="overflow-x-auto border border-[#E5E5E5] bg-white shadow-xs">
       <div className="min-w-[780px]">
         {/* Encabezado de la tabla */}
-        <div className="grid grid-cols-[2fr_1.2fr_1fr_1.2fr_1fr_180px] items-center border-b border-[#E5E5E5] bg-[#FAFAFA] px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#777777]">
+        <div className="grid grid-cols-[2fr_1.2fr_1fr_1.2fr_1fr_180px] items-center border-b border-[#E5E5E5] bg-[#FAFAFA] px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-[#777777]">
           <div>Cliente y Beneficios</div>
           <div>Contacto</div>
           <div>RFC</div>
@@ -59,7 +59,7 @@ export default function CustomerTable({
             >
               {/* Columna 1: Cliente & Beneficios */}
               <div className="flex items-center gap-3.5 pr-2 min-w-0">
-                <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-black font-bold text-white text-sm shadow-xs group-hover:bg-[#D8A814] transition-colors">
+                <div className="flex h-10 w-10 flex-none items-center justify-center border border-black bg-black font-bold text-white text-sm shadow-xs group-hover:bg-[#D8A814] group-hover:border-[#D8A814] group-hover:text-black transition-colors">
                   {initial}
                 </div>
 
@@ -70,13 +70,13 @@ export default function CustomerTable({
 
                   <div className="mt-1 flex flex-wrap items-center gap-1.5">
                     {tieneDescuento && (
-                      <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
+                      <span className="inline-flex items-center gap-1 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
                         <Percent size={10} />
                         {customer.descuento}% desc.
                       </span>
                     )}
 
-                    <span className="inline-flex items-center gap-1 rounded bg-[#FFFBEB] px-2 py-0.5 text-[10px] font-bold text-[#B45309] border border-[#FDE68A]">
+                    <span className="inline-flex items-center gap-1 bg-[#FFFBEB] px-2 py-0.5 text-[10px] font-bold text-[#B45309] border border-[#FDE68A]">
                       <Award size={10} />
                       {customer.puntos || 0} pts
                     </span>
@@ -93,7 +93,7 @@ export default function CustomerTable({
               {/* Columna 3: RFC */}
               <div className="text-xs font-mono text-[#555555]">
                 {customer.rfc ? (
-                  <span className="rounded bg-[#F3F4F6] px-2 py-0.5 font-semibold text-black">
+                  <span className="bg-[#F3F4F6] px-2 py-0.5 font-semibold text-black border border-[#E0E0E0]">
                     {customer.rfc}
                   </span>
                 ) : (
@@ -122,12 +122,12 @@ export default function CustomerTable({
                 <span className="font-bold text-[#D8A814] text-sm">
                   {customer.puntos || 0}
                 </span>
-                <span className="text-[11px] text-[#888888] block">puntos</span>
+                <span className="text-[11px] text-[#777777] uppercase tracking-wider block">puntos</span>
               </div>
 
               {/* Columna 6: Acciones (Editar, Eliminar) */}
               <div
-                className="flex items-center justify-end gap-2 text-right"
+                className="flex items-center justify-end gap-1.5 text-right"
                 onClick={(e) => e.stopPropagation()}
               >
                 {onEditCustomer && (
@@ -135,7 +135,7 @@ export default function CustomerTable({
                     type="button"
                     onClick={() => onEditCustomer(customer)}
                     title="Editar cliente"
-                    className="inline-flex items-center gap-1 rounded-lg border border-[#D8A814] bg-white px-2.5 py-1.5 text-xs font-bold text-black hover:bg-[#D8A814] hover:text-white transition-colors shadow-2xs"
+                    className="inline-flex items-center gap-1 border border-[#D8A814] bg-white px-2.5 py-1.5 text-xs font-bold text-black hover:bg-[#D8A814] hover:text-black transition-colors shadow-2xs cursor-pointer"
                   >
                     <Edit3 size={13} />
                     Editar
@@ -147,7 +147,7 @@ export default function CustomerTable({
                     type="button"
                     onClick={() => onDeleteCustomer(customer)}
                     title="Eliminar cliente"
-                    className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-bold text-red-600 hover:bg-red-600 hover:text-white transition-colors shadow-2xs"
+                    className="inline-flex items-center gap-1 border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-bold text-red-600 hover:bg-red-600 hover:text-white transition-colors shadow-2xs cursor-pointer"
                   >
                     <Trash2 size={13} />
                     Eliminar

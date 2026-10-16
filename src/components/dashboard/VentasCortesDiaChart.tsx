@@ -88,7 +88,7 @@ export default function VentasCortesDiaChart({
     : "";
 
   return (
-    <section className="border border-[#E2E2E2] bg-white p-6 md:p-8">
+    <section className="border border-[#E2E2E2] bg-white p-4 sm:p-6 lg:p-8">
       {/* 1. Header con Títulos y Controles */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[#F0F0F0] pb-6">
         <div>
@@ -99,7 +99,7 @@ export default function VentasCortesDiaChart({
             </p>
           </div>
 
-          <h2 className="mt-1 text-2xl font-bold text-black">
+          <h2 className="mt-1 text-xl sm:text-2xl font-bold text-black">
             Ventas del Día y Cortes de Caja
           </h2>
           <p className="mt-1 text-xs text-[#777777]">
@@ -108,51 +108,51 @@ export default function VentasCortesDiaChart({
         </div>
 
         {/* Pestañas de Vista y Enlace a Caja */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex border border-[#E0E0E0] bg-[#FAFAFA] p-0.5">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+          <div className="grid grid-cols-3 sm:flex border border-[#E0E0E0] bg-[#FAFAFA] p-0.5 w-full sm:w-auto">
             <button
               type="button"
               onClick={() => setView("barras")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+              className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
                 view === "barras"
                   ? "bg-black text-[#D8A814]"
                   : "text-[#666666] hover:text-black"
               }`}
             >
-              <BarChart3 size={13} />
+              <BarChart3 size={13} className="shrink-0" />
               <span>Por Horas</span>
             </button>
 
             <button
               type="button"
               onClick={() => setView("acumulado")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+              className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
                 view === "acumulado"
                   ? "bg-black text-[#D8A814]"
                   : "text-[#666666] hover:text-black"
               }`}
             >
-              <LineChartIcon size={13} />
+              <LineChartIcon size={13} className="shrink-0" />
               <span>Acumulado</span>
             </button>
 
             <button
               type="button"
               onClick={() => setView("cortes")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+              className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
                 view === "cortes"
                   ? "bg-black text-[#D8A814]"
                   : "text-[#666666] hover:text-black"
               }`}
             >
-              <Lock size={13} />
+              <Lock size={13} className="shrink-0" />
               <span>Cortes ({cortes.length})</span>
             </button>
           </div>
 
           <Link
             href="/caja"
-            className="inline-flex items-center gap-1.5 border border-[#CCCCCC] bg-white px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-black hover:border-black hover:bg-[#FAFAFA] transition-colors cursor-pointer"
+            className="inline-flex items-center justify-center gap-1.5 border border-[#CCCCCC] bg-white px-3.5 py-1.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-black hover:border-black hover:bg-[#FAFAFA] transition-colors cursor-pointer w-full sm:w-auto"
           >
             <span>Ir a Caja</span>
             <ArrowRight size={13} className="text-[#D8A814]" />
@@ -161,7 +161,7 @@ export default function VentasCortesDiaChart({
       </div>
 
       {/* 2. Resumen Ejecutivo de Métricas Clave */}
-      <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Total Ventas Hoy */}
         <div className="border border-[#E5E5E5] bg-[#FAFAFA] p-4">
           <p className="text-[10px] font-bold uppercase tracking-wider text-[#777777]">

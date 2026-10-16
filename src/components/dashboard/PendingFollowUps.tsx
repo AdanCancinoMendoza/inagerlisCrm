@@ -31,15 +31,15 @@ export default function PendingFollowUps({
   onToggleCompletado,
 }: PendingFollowUpsProps) {
   return (
-    <section className="border border-[#E2E2E2] bg-white p-7 shadow-xs">
+    <section className="border border-[#E2E2E2] bg-white p-4 sm:p-6 lg:p-7 shadow-xs">
       {/* Header Corporativo Inagerlis */}
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+      <div className="mb-5 sm:mb-6 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#D8A814]">
             Recordatorios y Agenda
           </p>
 
-          <h2 className="mt-1 text-xl font-bold text-black">
+          <h2 className="mt-1 text-lg sm:text-xl font-bold text-black">
             Próximos en Agenda
           </h2>
         </div>

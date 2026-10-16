@@ -528,13 +528,13 @@ export default function MiOrganizacionPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#F7F7F7] text-black transition-colors duration-200">
+    <main className="min-h-screen bg-[#F7F7F7] text-black transition-colors duration-200 w-full max-w-full overflow-x-hidden">
       <Sidebar />
 
-      <div className={`min-h-screen transition-all duration-300 ${collapsed ? "ml-0 lg:ml-[80px]" : "ml-0 lg:ml-[250px]"}`}>
+      <div className={`min-h-screen w-full max-w-full overflow-x-hidden min-w-0 transition-all duration-300 ${collapsed ? "ml-0 lg:ml-[80px]" : "ml-0 lg:ml-[250px]"}`}>
         <Header />
 
-        <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+        <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 w-full max-w-full">
           {/* =========================================================
               ENCABEZADO CORPORATIVO CON BOTÓN ÚNICO DE CREACIÓN
           ========================================================= */}

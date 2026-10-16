@@ -377,13 +377,53 @@ export default function ServiciosPOSPage() {
       {/* HEADER POS */}
       <POSHeader activeTab="servicios" />
 
-      {/* CONTENIDO PRINCIPAL */}
-      <div className="grid h-[calc(100vh-136px)] grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] overflow-hidden">
+      {/* BANNER CORPORATIVO: MÓDULO PRÓXIMAMENTE */}
+      <div className="flex flex-wrap items-center justify-between border-b border-[#262626] bg-[#050505] px-7 py-2.5 text-white">
+        <div className="flex items-center gap-3">
+          <span className="border border-[#D8A814] bg-[#D8A814]/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#D8A814]">
+            Próximamente
+          </span>
+          <p className="text-xs font-medium tracking-[0.04em] text-[#E0E0E0]">
+            Módulo de pago de servicios y recargas en proceso de integración con proveedor autorizado.
+          </p>
+        </div>
+        <div className="hidden sm:flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#777777]">
+          <span className="h-1.5 w-1.5 bg-[#D8A814] animate-pulse" />
+          <span>Fase de Pruebas y Homologación</span>
+        </div>
+      </div>
+
+      {/* CONTENIDO PRINCIPAL CON MARCA DE AGUA */}
+      <div className="relative grid h-[calc(100vh-178px)] grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] overflow-hidden">
+        {/* MARCA DE AGUA DE FONDO (PATRÓN DIAGONAL) */}
+        <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-around select-none overflow-hidden opacity-[0.035]">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <div
+              key={i}
+              className="flex whitespace-nowrap text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black uppercase tracking-[0.3em] text-black -rotate-12 translate-x-[-10%]"
+            >
+              <span>PRÓXIMAMENTE &nbsp;•&nbsp; EN INTEGRACIÓN &nbsp;•&nbsp; PRÓXIMAMENTE &nbsp;•&nbsp; EN INTEGRACIÓN &nbsp;•&nbsp; PRÓXIMAMENTE &nbsp;•&nbsp;</span>
+            </div>
+          ))}
+        </div>
+
+        {/* SELLO CENTRAL DE AGUA (TRANSLÚCIDO) */}
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center select-none">
+          <div className="-rotate-12 border-4 border-black/[0.06] px-8 py-4 sm:px-16 sm:py-8 text-center">
+            <p className="text-4xl sm:text-6xl md:text-7xl font-black uppercase tracking-[0.3em] text-black/[0.06]">
+              PRÓXIMAMENTE
+            </p>
+            <p className="mt-2 text-xs sm:text-sm font-bold uppercase tracking-[0.24em] text-black/[0.05]">
+              Venta de Servicios y Recargas • En Desarrollo
+            </p>
+          </div>
+        </div>
+
         {/* COLUMNA IZQUIERDA: SERVICIOS Y RECARGAS */}
-        <section className="flex flex-col min-w-0 border-r border-[#E2E2E2] bg-[#F9FAFB] p-6 overflow-hidden">
+        <section className="flex flex-col min-w-0 border-r border-[#E2E2E2] bg-[#F9FAFB] p-6 overflow-hidden relative z-0">
           {/* Búsqueda */}
           <div className="flex-none">
-            <div className="flex h-12 flex-1 items-center rounded-xl border border-[#E5E7EB] bg-white px-4 shadow-sm focus-within:border-black">
+            <div className="flex h-12 flex-1 items-center border border-[#E5E7EB] bg-white px-4 shadow-sm focus-within:border-black">
               <Search size={18} className="mr-3 text-[#9CA3AF]" />
               <input
                 value={searchQuery}
@@ -406,7 +446,7 @@ export default function ServiciosPOSPage() {
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
                 className={`
-                  h-9 whitespace-nowrap rounded-lg px-4 text-xs font-bold transition-all
+                  h-9 whitespace-nowrap px-4 text-xs font-bold uppercase tracking-[0.12em] transition-all
                   ${
                     activeCategory === cat
                       ? "bg-black text-white shadow-sm"
@@ -421,7 +461,7 @@ export default function ServiciosPOSPage() {
 
           {/* Grid de Proveedores */}
           <div className="mt-4 flex-1 overflow-y-auto pr-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-[#D1D5DB]">
-            <p className="mb-3 text-xs font-bold text-[#6B7280]">
+            <p className="mb-3 text-xs font-bold uppercase tracking-[0.14em] text-[#6B7280]">
               Catálogo de Convenios ({filteredProviders.length})
             </p>
 
@@ -434,7 +474,7 @@ export default function ServiciosPOSPage() {
                     key={provider.id}
                     onClick={() => handleSelectProvider(provider)}
                     className={`
-                      group flex flex-col justify-between rounded-xl border p-4 text-left transition-all shadow-xs
+                      group flex flex-col justify-between border p-4 text-left transition-all shadow-xs
                       ${
                         isSelected
                           ? "border-2 border-[var(--primary)] bg-white ring-2 ring-[var(--primary)]/10 shadow-md"
@@ -444,17 +484,17 @@ export default function ServiciosPOSPage() {
                   >
                     <div className="flex items-center justify-between">
                       <div
-                        className={`flex h-9 w-9 items-center justify-center rounded-xl ${provider.badgeColor} ${provider.textColor} shadow-xs`}
+                        className={`flex h-9 w-9 items-center justify-center ${provider.badgeColor} ${provider.textColor} shadow-xs`}
                       >
                         {renderIcon(provider.iconType)}
                       </div>
 
                       {provider.commission > 0 ? (
-                        <span className="rounded-full bg-[#FEF3C7] px-2 py-0.5 text-[10px] font-bold text-[#D97706]">
+                        <span className="border border-[#D97706]/40 bg-[#FEF3C7] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-[#D97706]">
                           +${provider.commission} com.
                         </span>
                       ) : (
-                        <span className="rounded-full bg-[#ECFDF5] px-2 py-0.5 text-[10px] font-bold text-[#059669]">
+                        <span className="border border-[#059669]/40 bg-[#ECFDF5] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-[#059669]">
                           Sin com.
                         </span>
                       )}
@@ -501,7 +541,7 @@ export default function ServiciosPOSPage() {
                         <td className="px-4 py-3 text-right font-medium text-[#4B5563]">{money(tx.amount)}</td>
                         <td className="px-4 py-3 text-right font-bold text-[var(--primary)]">{money(tx.total)}</td>
                         <td className="px-4 py-3 text-center">
-                          <span className="inline-flex items-center gap-1 rounded-full bg-[#ECFDF5] px-2 py-0.5 text-[10px] font-bold text-[#059669]">
+                          <span className="inline-flex items-center gap-1 border border-[#059669]/40 bg-[#ECFDF5] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#059669]">
                             <CheckCircle2 size={11} /> {tx.status}
                           </span>
                         </td>
@@ -515,13 +555,13 @@ export default function ServiciosPOSPage() {
         </section>
 
         {/* COLUMNA DERECHA: FORMULARIO DE COBRO DEL SERVICIO SELECCIONADO */}
-        <aside className="flex min-w-0 h-full overflow-hidden flex-col bg-white border-l border-[#E5E7EB]">
+        <aside className="relative flex min-w-0 h-full overflow-hidden flex-col bg-white border-l border-[#E5E7EB] z-0">
           {selectedProvider ? (
             <div className="flex h-full flex-col justify-between">
               {/* Encabezado del Servicio */}
               <div className="border-b border-[#EEEEEE] p-6">
                 <div className="flex items-center gap-3">
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${selectedProvider.badgeColor} ${selectedProvider.textColor} shadow-md`}>
+                  <div className={`flex h-12 w-12 items-center justify-center ${selectedProvider.badgeColor} ${selectedProvider.textColor} shadow-md`}>
                     {renderIcon(selectedProvider.iconType)}
                   </div>
                   <div>
@@ -536,14 +576,14 @@ export default function ServiciosPOSPage() {
               {/* Formulario de Datos */}
               <div className="flex-1 overflow-y-auto p-6 space-y-5 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-[#D1D5DB]">
                 {errorMsg && (
-                  <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-600">
+                  <div className="border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-600">
                     {errorMsg}
                   </div>
                 )}
 
                 {/* Referencia / Contrato / Teléfono */}
                 <div>
-                  <label className="mb-2 block text-xs font-bold uppercase text-[#374151]">
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-[#374151]">
                     {selectedProvider.referenceLabel}
                   </label>
                   <div className="relative flex items-center">
@@ -552,7 +592,7 @@ export default function ServiciosPOSPage() {
                       value={reference}
                       onChange={(e) => setReference(e.target.value)}
                       placeholder={selectedProvider.referencePlaceholder}
-                      className="h-12 w-full rounded-xl border border-[#D1D5DB] px-4 font-mono text-sm text-black outline-none focus:border-black focus:ring-1 focus:ring-black"
+                      className="h-12 w-full border border-[#D1D5DB] px-4 font-mono text-sm text-black outline-none focus:border-black"
                     />
                     <button
                       type="button"
@@ -569,7 +609,7 @@ export default function ServiciosPOSPage() {
 
                 {/* Selección de Monto / Paquetes */}
                 <div>
-                  <label className="mb-2 block text-xs font-bold uppercase text-[#374151]">
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-[#374151]">
                     Monto o Paquete a Pagar
                   </label>
 
@@ -582,7 +622,7 @@ export default function ServiciosPOSPage() {
                             key={amt}
                             type="button"
                             onClick={() => setSelectedAmount(amt)}
-                            className={`h-10 rounded-lg border text-xs font-bold transition-all ${
+                            className={`h-10 border text-xs font-bold transition-all ${
                               active
                                 ? "border-2 border-black bg-black text-white shadow-xs"
                                 : "border-[#E5E7EB] bg-[#FAFAFA] text-[#374151] hover:border-[#9CA3AF]"
@@ -595,7 +635,7 @@ export default function ServiciosPOSPage() {
                       <button
                         type="button"
                         onClick={() => setSelectedAmount("custom")}
-                        className={`h-10 rounded-lg border text-xs font-bold transition-all ${
+                        className={`h-10 border text-xs font-bold transition-all ${
                           selectedAmount === "custom"
                             ? "border-2 border-black bg-black text-white shadow-xs"
                             : "border-[#E5E7EB] bg-[#FAFAFA] text-[#374151] hover:border-[#9CA3AF]"
@@ -614,14 +654,14 @@ export default function ServiciosPOSPage() {
                         value={customAmount}
                         onChange={(e) => setCustomAmount(e.target.value)}
                         placeholder="0.00"
-                        className="h-12 w-full rounded-xl border border-[#D1D5DB] pl-8 pr-4 font-bold text-base text-black outline-none focus:border-black focus:ring-1 focus:ring-black"
+                        className="h-12 w-full border border-[#D1D5DB] pl-8 pr-4 font-bold text-base text-black outline-none focus:border-black"
                       />
                     </div>
                   )}
                 </div>
 
                 {/* Desglose Informativo */}
-                <div className="rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-4 space-y-2 text-xs">
+                <div className="border border-[#E5E7EB] bg-[#F9FAFB] p-4 space-y-2 text-xs">
                   <div className="flex justify-between text-[#6B7280]">
                     <span>Monto del Servicio</span>
                     <span className="font-bold text-[#111827]">{money(currentAmount)}</span>
@@ -634,37 +674,37 @@ export default function ServiciosPOSPage() {
 
                   <div className="border-t border-[#E5E7EB] pt-2 flex justify-between font-bold text-sm text-[#111827]">
                     <span>Total a Cobrar</span>
-                    <span className="text-base text-[var(--primary)]">{money(currentTotal)}</span>
+                    <span className="text-base font-bold text-[#D8A814]">{money(currentTotal)}</span>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2 rounded-xl bg-[#EFF6FF] p-3 text-xs text-[#1D4ED8]">
-                  <Info size={16} className="mt-0.5 flex-none text-[#2563EB]" />
+                <div className="flex items-start gap-2 border border-[#D8A814]/30 bg-[#D8A814]/10 p-3 text-xs text-[#8C6D0A]">
+                  <Info size={16} className="mt-0.5 flex-none text-[#D8A814]" />
                   <p className="leading-snug">
-                    El pago o recarga se acredita de manera instantánea en la plataforma del proveedor.
+                    Módulo en preparación. Las transacciones realizadas en esta vista son simuladas hasta concluir la integración oficial del proveedor.
                   </p>
                 </div>
               </div>
 
               {/* Botón de Procesar Cobro */}
-              <div className="border-t border-[#E5E7EB] p-6 bg-white">
+              <div className="border-t border-[#E5E7EB] p-6 bg-white space-y-2">
                 <button
                   onClick={handleProcessPayment}
                   className="
-                    flex h-13 w-full items-center justify-center gap-2 rounded-xl
-                    bg-[var(--primary)] text-sm font-bold text-white
-                    shadow-md transition-all hover:bg-[var(--primary-hover)]
+                    flex h-12 w-full items-center justify-center gap-2
+                    border border-[#D8A814] bg-[#050505] text-xs font-bold uppercase tracking-[0.16em] text-[#D8A814]
+                    shadow-sm transition-all hover:bg-[#D8A814] hover:text-black cursor-pointer
                   "
                 >
-                  <Receipt size={18} />
-                  <span>Cobrar Servicio ({money(currentTotal)})</span>
+                  <Receipt size={17} />
+                  <span>Cobrar Servicio ({money(currentTotal)}) — Simulación</span>
                 </button>
               </div>
             </div>
           ) : (
             <div className="flex h-full flex-col items-center justify-center p-8 text-center text-[#6B7280]">
               <Zap size={36} className="mb-3 text-[#9CA3AF]" />
-              <p className="font-bold text-black">Selecciona un servicio</p>
+              <p className="font-bold uppercase tracking-[0.14em] text-black">Selecciona un servicio</p>
               <p className="mt-1 text-xs">Elige un proveedor del catálogo para procesar la recarga o pago.</p>
             </div>
           )}
@@ -673,47 +713,52 @@ export default function ServiciosPOSPage() {
 
       {/* MODAL DE CONFIRMACIÓN DE PAGO DE SERVICIO */}
       {isProcessingModal && selectedProvider && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <div className="flex items-center justify-between border-b border-[#EEEEEE] pb-4">
-              <h3 className="text-lg font-bold text-black">Confirmación de Pago</h3>
-              <button onClick={() => setIsProcessingModal(false)} className="text-[#999999] hover:text-black">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md border border-[#262626] bg-[#050505] p-6 shadow-2xl text-white">
+            <div className="flex items-center justify-between border-b border-[#262626] pb-4">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#D8A814]">
+                  Próximamente • Simulación
+                </span>
+                <h3 className="text-base font-bold tracking-[0.12em] text-white">Confirmación de Pago</h3>
+              </div>
+              <button onClick={() => setIsProcessingModal(false)} className="text-[#777777] hover:text-white">
                 <X size={20} />
               </button>
             </div>
 
             {paymentSuccess ? (
               <div className="my-8 flex flex-col items-center text-center">
-                <CheckCircle2 size={56} className="text-emerald-500 animate-bounce" />
-                <h4 className="mt-4 text-xl font-bold text-black">¡Transacción Exitosa!</h4>
-                <p className="mt-1 text-xs text-[#6B7280]">
-                  Comprobante emitido correctamente para {selectedProvider.name}
+                <CheckCircle2 size={56} className="text-[#D8A814] animate-bounce" />
+                <h4 className="mt-4 text-xl font-bold tracking-[0.14em] text-white">¡Transacción Simulada!</h4>
+                <p className="mt-1 text-xs text-[#777777]">
+                  Comprobante emitido para {selectedProvider.name} (Modo Pruebas)
                 </p>
               </div>
             ) : (
               <div className="mt-5 space-y-4">
-                <div className="rounded-xl bg-[#F9FAFB] p-4 text-center border border-[#E5E7EB]">
-                  <p className="text-xs font-bold uppercase text-[#6B7280]">{selectedProvider.name}</p>
-                  <p className="mt-1 text-2xl font-mono font-bold text-black">{reference}</p>
-                  <p className="mt-2 text-2xl font-bold text-[var(--primary)]">{money(currentTotal)}</p>
+                <div className="border border-[#262626] bg-[#0F0F0F] p-4 text-center">
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#777777]">{selectedProvider.name}</p>
+                  <p className="mt-1 text-xl font-mono font-bold text-white">{reference}</p>
+                  <p className="mt-2 text-2xl font-bold text-[#D8A814]">{money(currentTotal)}</p>
                 </div>
 
                 <div className="space-y-2 text-xs">
-                  <div className="flex justify-between text-[#6B7280]">
+                  <div className="flex justify-between text-[#777777]">
                     <span>Monto Servicio:</span>
-                    <span className="font-bold text-black">{money(currentAmount)}</span>
+                    <span className="font-bold text-white">{money(currentAmount)}</span>
                   </div>
-                  <div className="flex justify-between text-[#6B7280]">
+                  <div className="flex justify-between text-[#777777]">
                     <span>Comisión:</span>
-                    <span className="font-bold text-black">{money(currentCommission)}</span>
+                    <span className="font-bold text-white">{money(currentCommission)}</span>
                   </div>
                 </div>
 
                 <button
                   onClick={handleConfirmSubmit}
-                  className="mt-4 flex h-12 w-full items-center justify-center rounded-xl bg-[var(--primary)] text-sm font-bold text-white shadow-md hover:bg-[var(--primary-hover)] transition-all"
+                  className="mt-4 flex h-12 w-full items-center justify-center border border-[#D8A814] bg-[#D8A814] text-xs font-bold uppercase tracking-[0.16em] text-black shadow-md hover:bg-white transition-all cursor-pointer"
                 >
-                  Procesar Transacción
+                  Confirmar Simulación
                 </button>
               </div>
             )}

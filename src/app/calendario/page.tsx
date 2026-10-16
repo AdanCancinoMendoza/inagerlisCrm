@@ -35,6 +35,7 @@ import { apiRequest } from "@/services/api";
 import { getOrganizacionId, getUsuarioActual } from "@/services/auth";
 import { getDiasFestivosDelAno, getFestivoPorFecha, DiaFestivo } from "@/utils/festivos";
 import { enqueueOfflineCalendario, syncOfflineCalendario } from "@/services/calendarioSync";
+import { useSocket } from "@/hooks/useSocket";
 
 export interface EventoItem {
   id: string;
@@ -71,6 +72,7 @@ const MESES = [
 
 export default function CalendarioPage() {
   const { collapsed } = useSidebar();
+  const { socket, connected: socketConnected } = useSocket();
   const [loading, setLoading] = useState(true);
 
   // Fecha actual y fecha en vista del calendario
@@ -201,6 +203,63 @@ export default function CalendarioPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Sincronización en tiempo real vía WebSockets
+  useEffect(() => {
+    if (!socket) return;
+
+    const user = getUsuarioActual();
+    const orgId = getOrganizacionId() || user?.organizacionId;
+
+    const handleCitaCreada = (nueva: EventoItem) => {
+      setEventos((prev) => {
+        const existe = prev.some((e) => e.id === nueva.id);
+        const next = existe ? prev.map((e) => (e.id === nueva.id ? { ...e, ...nueva } : e)) : [nueva, ...prev];
+        if (orgId && typeof window !== "undefined") {
+          try {
+            localStorage.setItem(`inagerlis_offline_calendario_${orgId}`, JSON.stringify(next));
+          } catch {}
+        }
+        return next;
+      });
+      setSuccessMsg(`Nueva cita o pedido: "${nueva.titulo}"`);
+      setTimeout(() => setSuccessMsg(null), 3500);
+    };
+
+    const handleCitaActualizada = (actualizada: EventoItem) => {
+      setEventos((prev) => {
+        const next = prev.map((e) => (e.id === actualizada.id ? { ...e, ...actualizada } : e));
+        if (orgId && typeof window !== "undefined") {
+          try {
+            localStorage.setItem(`inagerlis_offline_calendario_${orgId}`, JSON.stringify(next));
+          } catch {}
+        }
+        return next;
+      });
+    };
+
+    const handleCitaEliminada = (data: { id: string }) => {
+      setEventos((prev) => {
+        const next = prev.filter((e) => e.id !== data.id);
+        if (orgId && typeof window !== "undefined") {
+          try {
+            localStorage.setItem(`inagerlis_offline_calendario_${orgId}`, JSON.stringify(next));
+          } catch {}
+        }
+        return next;
+      });
+    };
+
+    socket.on("cita:creada", handleCitaCreada);
+    socket.on("cita:actualizada", handleCitaActualizada);
+    socket.on("cita:eliminada", handleCitaEliminada);
+
+    return () => {
+      socket.off("cita:creada", handleCitaCreada);
+      socket.off("cita:actualizada", handleCitaActualizada);
+      socket.off("cita:eliminada", handleCitaEliminada);
+    };
+  }, [socket]);
 
   // Detector de conectividad y auto-sincronización de cola offline
   useEffect(() => {
@@ -663,13 +722,13 @@ export default function CalendarioPage() {
   }, [eventosFiltrados, hoy]);
 
   return (
-    <main className="min-h-screen bg-[#F7F7F7] text-black transition-colors duration-200">
+    <main className="min-h-screen bg-[#F7F7F7] text-black transition-colors duration-200 w-full max-w-full overflow-x-hidden">
       <Sidebar />
 
-      <div className={`min-h-screen transition-all duration-300 ${collapsed ? "ml-0 lg:ml-[80px]" : "ml-0 lg:ml-[250px]"}`}>
+      <div className={`min-h-screen w-full max-w-full overflow-x-hidden min-w-0 transition-all duration-300 ${collapsed ? "ml-0 lg:ml-[80px]" : "ml-0 lg:ml-[250px]"}`}>
         <Header />
 
-        <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+        <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 w-full max-w-full">
           {/* =========================================================
               ENCABEZADO CORPORATIVO CON BOTÓN DE REGISTRO
           ========================================================= */}

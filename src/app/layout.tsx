@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { SidebarProvider } from "@/context/SidebarContext";
 import { PwaProvider } from "@/context/PwaContext";
+import { SocketProvider } from "@/context/SocketContext";
 import AuthGuard from "@/components/auth/AuthGuard";
 
 export const metadata: Metadata = {
@@ -48,7 +49,9 @@ export default function RootLayout({
         <ThemeProvider>
           <SidebarProvider>
             <PwaProvider>
-              <AuthGuard>{children}</AuthGuard>
+              <SocketProvider>
+                <AuthGuard>{children}</AuthGuard>
+              </SocketProvider>
             </PwaProvider>
           </SidebarProvider>
         </ThemeProvider>

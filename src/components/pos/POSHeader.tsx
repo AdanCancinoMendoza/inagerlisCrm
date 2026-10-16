@@ -214,7 +214,10 @@ export default function POSHeader({
             }`}
           >
             <Zap size={17} />
-            Servicios
+            <span>Servicios</span>
+            <span className="border border-[#D8A814]/40 bg-[#D8A814]/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.16em] text-[#D8A814]">
+              Próximamente
+            </span>
           </button>
 
           <button

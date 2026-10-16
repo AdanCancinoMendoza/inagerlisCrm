@@ -89,7 +89,7 @@ export default function ArticulosPage() {
   const [organizacionData, setOrganizacionData] = useState<{ nombre?: string; pais?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "info" } | null>(null);
+  const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "info" | "error" } | null>(null);
 
   // Vistas y Pestañas
   const [activeTab, setActiveTab] = useState<"todos" | "familias">("todos");
@@ -142,11 +142,11 @@ export default function ArticulosPage() {
   const [quickFamiliaDescripcion, setQuickFamiliaDescripcion] = useState("");
   const [savingQuickFamilia, setSavingQuickFamilia] = useState(false);
 
-  const showToast = (text: string, type: "success" | "info" = "success") => {
+  const showToast = (text: string, type: "success" | "info" | "error" = "success") => {
     setToastMessage({ text, type });
     setTimeout(() => {
       setToastMessage(null);
-    }, 4000);
+    }, 4500);
   };
 
   const fetchArticulos = async (showLoadingState = true) => {
@@ -353,7 +353,7 @@ export default function ArticulosPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.codigo.trim() || !formData.nombre.trim()) {
-      alert("El código y el nombre del artículo son obligatorios.");
+      showToast("El código y el nombre del artículo son obligatorios.", "error");
       return;
     }
 
@@ -361,20 +361,38 @@ export default function ArticulosPage() {
     const usuario = getUsuarioActual();
     const orgId = getOrganizacionId() || usuario?.organizacionId;
 
+    if (!orgId) {
+      showToast("No se identificó la organización activa.", "error");
+      setSaving(false);
+      return;
+    }
+
+    const payload = {
+      ...formData,
+      codigo: formData.codigo.trim(),
+      nombre: formData.nombre.trim(),
+      descripcion: formData.descripcion?.trim() || null,
+      precioCompra: Number(formData.precioCompra) || 0,
+      precioVenta: Number(formData.precioVenta) || 0,
+      unidad: formData.unidad?.trim() || "Pieza",
+      familiaId: formData.familiaId?.trim() || null,
+      subfamiliaId: formData.subfamiliaId?.trim() || null,
+      stockInicial: Math.round(Number(formData.stockActual)) || 0,
+      stockActual: Math.round(Number(formData.stockActual)) || 0,
+      organizacionId: orgId,
+    };
+
     try {
       if (editingArticulo) {
         await apiRequest(`/articulos/${editingArticulo.id}`, {
           method: "PUT",
-          body: JSON.stringify(formData),
+          body: JSON.stringify(payload),
         });
         showToast("Artículo actualizado con éxito", "success");
       } else {
         await apiRequest(`/articulos?organizacionId=${orgId}`, {
           method: "POST",
-          body: JSON.stringify({
-            ...formData,
-            organizacionId: orgId,
-          }),
+          body: JSON.stringify(payload),
         });
         showToast("Artículo creado con éxito", "success");
       }
@@ -382,7 +400,8 @@ export default function ArticulosPage() {
       setModalOpen(false);
       await fetchArticulos(false);
     } catch (err: any) {
-      alert(err.message || "Error al guardar el artículo");
+      console.error("Error al guardar el artículo:", err);
+      showToast(err.message || "Error al guardar el artículo", "error");
     } finally {
       setSaving(false);
     }
@@ -492,21 +511,33 @@ export default function ArticulosPage() {
   const selectedFamiliaObj = familias.find((f) => f.id === formData.familiaId);
 
   return (
-    <main className="min-h-screen bg-[#F7F7F7]">
+    <main className="min-h-screen bg-[#F7F7F7] w-full max-w-full overflow-x-hidden">
       <Sidebar />
 
-      <div className={`min-h-screen transition-all duration-300 ${collapsed ? "ml-0 lg:ml-[80px]" : "ml-0 lg:ml-[250px]"}`}>
+      <div className={`min-h-screen w-full max-w-full overflow-x-hidden min-w-0 transition-all duration-300 ${collapsed ? "ml-0 lg:ml-[80px]" : "ml-0 lg:ml-[250px]"}`}>
         <Header />
 
         {/* Toast Notificación */}
         {toastMessage && (
-          <div className="fixed top-6 right-6 z-[10000] flex items-center gap-3 bg-black px-5 py-3.5 text-white shadow-2xl animate-in slide-in-from-top-5 duration-200 border-l-4 border-black">
-            <CheckCircle2 size={16} className="text-white flex-none" />
-            <span className="text-xs font-bold">{toastMessage.text}</span>
+          <div
+            className={`fixed top-6 right-6 z-[10000] flex items-center gap-3 px-5 py-3.5 text-white shadow-2xl animate-in slide-in-from-top-5 duration-200 border-l-4 ${
+              toastMessage.type === "error"
+                ? "bg-[#140606] border-[#DC2626]"
+                : toastMessage.type === "info"
+                ? "bg-[#0A0A0A] border-[#D8A814]"
+                : "bg-black border-[#D8A814]"
+            }`}
+          >
+            {toastMessage.type === "error" ? (
+              <AlertCircle size={16} className="text-[#DC2626] flex-none" />
+            ) : (
+              <CheckCircle2 size={16} className="text-[#D8A814] flex-none" />
+            )}
+            <span className="text-xs font-bold uppercase tracking-wider">{toastMessage.text}</span>
           </div>
         )}
 
-        <div className="p-4 sm:p-6 lg:p-8">
+        <div className="p-3 sm:p-6 lg:p-8 w-full max-w-full">
           {/* Encabezado Principal */}
           <div className="mb-6 sm:mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>

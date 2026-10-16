@@ -30,12 +30,12 @@ export default function Header() {
   const inicial = nombreUsuario.charAt(0).toUpperCase();
 
   return (
-    <header className="flex h-16 sm:h-20 lg:h-24 items-center justify-between border-b border-[#E5E5E5] dark:border-[#262626] bg-white dark:bg-[#111111] px-4 sm:px-6 lg:px-10 transition-colors">
-      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+    <header className="flex h-16 sm:h-20 lg:h-24 items-center justify-between border-b border-[#E5E5E5] dark:border-[#262626] bg-white dark:bg-[#111111] px-3 sm:px-6 lg:px-10 transition-colors w-full">
+      <div className="flex items-center gap-2 sm:gap-4 min-w-0 pr-2">
         {/* Botón hamburguesa Mobile */}
         <button
           onClick={toggleMobileSidebar}
-          title="Abrir menú"
+          title="Abrir menú de navegación"
           className="flex lg:hidden h-10 w-10 shrink-0 items-center justify-center border border-[#DDDDDD] dark:border-[#333333] bg-[#FAFAFA] dark:bg-[#1A1A1A] text-black dark:text-white hover:border-[var(--primary)] transition-all shadow-xs cursor-pointer active:scale-95"
         >
           <Menu size={20} />
@@ -51,7 +51,7 @@ export default function Header() {
         </button>
 
         <div className="min-w-0">
-          <h1 className="text-base sm:text-xl lg:text-2xl font-bold text-black dark:text-white truncate">
+          <h1 className="text-sm sm:text-lg lg:text-2xl font-bold text-black dark:text-white truncate">
             Hola, {nombreUsuario}
           </h1>
 
@@ -61,12 +61,12 @@ export default function Header() {
         </div>
       </div>
 
-      <div className="flex items-center gap-4 sm:gap-6">
+      <div className="flex items-center gap-2 sm:gap-6 shrink-0">
         {isInstallable && !isInstalled && (
           <button
             onClick={installPwa}
-            title="Instalar Inagerlis en tu navegador"
-            className="hidden sm:flex items-center gap-2 border border-[#D8A814] bg-[#FAF6E8] text-[#937107] hover:bg-[#D8A814] hover:text-black px-3.5 py-2 text-xs font-bold transition-all shadow-sm cursor-pointer active:scale-95"
+            title="Instalar Inagerlis en tu dispositivo"
+            className="hidden md:flex items-center gap-2 border border-[#D8A814] bg-[#FAF6E8] text-[#937107] hover:bg-[#D8A814] hover:text-black px-3.5 py-2 text-xs font-bold transition-all shadow-sm cursor-pointer active:scale-95"
           >
             <Download size={15} />
             <span>Instalar App</span>
@@ -78,8 +78,8 @@ export default function Header() {
             Organización
           </p>
 
-          <p className="mt-1 font-bold text-black">
-            {usuario?.organizacion?.nombre || "Imagertis CRM"}
+          <p className="mt-1 font-bold text-black truncate max-w-[160px]">
+            {usuario?.organizacion?.nombre || "Inagerlis CRM"}
           </p>
         </div>
 
@@ -87,24 +87,24 @@ export default function Header() {
         <div className="relative">
           <button
             onClick={() => setUserMenuOpen(!userMenuOpen)}
-            className="flex items-center gap-3 border border-[#E5E5E5] bg-[#FAFAFA] hover:bg-white p-2 px-3 transition-all cursor-pointer"
+            className="flex items-center gap-2 sm:gap-3 border border-[#E5E5E5] bg-[#FAFAFA] hover:bg-white p-1.5 sm:p-2 sm:px-3 transition-all cursor-pointer shadow-xs active:scale-98"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--primary)] font-bold text-white text-sm">
+            <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center border border-black bg-black font-bold text-white text-xs sm:text-sm shrink-0">
               {inicial}
             </div>
-            <div className="text-left hidden md:block">
-              <p className="text-xs font-bold text-black leading-tight">{nombreUsuario}</p>
+            <div className="text-left hidden lg:block">
+              <p className="text-xs font-bold text-black leading-tight truncate max-w-[130px]">{nombreUsuario}</p>
               <p className="text-[10px] font-semibold text-[var(--primary)]">{rolUsuario}</p>
             </div>
-            <ChevronDown size={14} className={`text-[#777777] transition-transform ${userMenuOpen ? "rotate-180" : ""}`} />
+            <ChevronDown size={14} className={`text-[#777777] transition-transform shrink-0 ${userMenuOpen ? "rotate-180" : ""}`} />
           </button>
 
           {userMenuOpen && (
-            <div className="absolute right-0 mt-2 w-52 border border-[#E5E5E5] bg-white shadow-xl z-50 animate-in fade-in zoom-in-95 duration-100">
+            <div className="absolute right-0 mt-2 w-56 border border-[#E5E5E5] bg-white shadow-xl z-50 animate-in fade-in zoom-in-95 duration-100">
               <div className="p-3 border-b border-[#EEEEEE] bg-[#FAFAFA]">
                 <p className="text-xs font-bold text-black">{nombreUsuario}</p>
                 <p className="text-[11px] text-[#777777] truncate">{usuario?.email || "usuario@empresa.com"}</p>
-                <span className="mt-1.5 inline-block text-[9px] font-bold uppercase tracking-wider bg-[var(--primary)] text-white px-2 py-0.5">
+                <span className="mt-1.5 inline-block text-[9px] font-bold uppercase tracking-wider bg-black text-[#D8A814] px-2 py-0.5 border border-[#D8A814]/30">
                   {rolUsuario}
                 </span>
               </div>

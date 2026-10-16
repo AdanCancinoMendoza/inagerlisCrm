@@ -1,38 +1,65 @@
-import { useEffect, useState } from "react";
-import { io, Socket } from "socket.io-client";
+"use client";
 
-const SOCKET_URL =
-  process.env.NEXT_PUBLIC_SOCKET_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:3001";
+import { useEffect, useRef } from "react";
+import { Socket } from "socket.io-client";
+import { useSocketContext } from "@/context/SocketContext";
 
+/**
+ * Hook optimizado de WebSocket.
+ * Reutiliza una única conexión Socket.io global (Singleton) a través de SocketContext.
+ * Se suscribe automáticamente a la sala de la organización activa del usuario.
+ *
+ * @param room Sala opcional personalizada para suscribirse adicionalmente
+ */
 export function useSocket(room?: string) {
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [connected, setConnected] = useState<boolean>(false);
+  const { socket, connected, organizacionRoom, joinRoom, leaveRoom } =
+    useSocketContext();
 
   useEffect(() => {
-    const socketIo = io(SOCKET_URL, {
-      transports: ["websocket"],
-      autoConnect: true,
-    });
+    if (!room || !connected) return;
 
-    socketIo.on("connect", () => {
-      setConnected(true);
-      if (room) {
-        socketIo.emit("join:room", { room });
-      }
-    });
-
-    socketIo.on("disconnect", () => {
-      setConnected(false);
-    });
-
-    setSocket(socketIo);
+    joinRoom(room);
 
     return () => {
-      socketIo.disconnect();
+      leaveRoom(room);
     };
-  }, [room]);
+  }, [room, connected, joinRoom, leaveRoom]);
 
-  return { socket, connected };
+  return {
+    socket,
+    connected,
+    organizacionRoom,
+    joinRoom,
+    leaveRoom,
+  };
+}
+
+/**
+ * Hook helper para escuchar eventos de WebSocket con prevención de memory leaks
+ * y ejecución con referencias actualizadas sin causar re-suscripciones innecesarias.
+ */
+export function useSocketEvent<T = any>(
+  eventName: string,
+  callback: (data: T) => void,
+  socketInstance?: Socket | null
+) {
+  const { socket: contextSocket } = useSocketContext();
+  const socket = socketInstance !== undefined ? socketInstance : contextSocket;
+
+  const callbackRef = useRef(callback);
+  callbackRef.current = callback;
+
+  useEffect(() => {
+    if (!socket || !eventName) return;
+
+    const handler = (data: T) => {
+      callbackRef.current?.(data);
+    };
+
+    socket.on(eventName, handler);
+
+    return () => {
+      socket.off(eventName, handler);
+    };
+  }, [socket, eventName]);
 }
