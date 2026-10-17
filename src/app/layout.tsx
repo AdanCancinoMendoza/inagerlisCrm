@@ -5,6 +5,7 @@ import { SidebarProvider } from "@/context/SidebarContext";
 import { PwaProvider } from "@/context/PwaContext";
 import { SocketProvider } from "@/context/SocketContext";
 import AuthGuard from "@/components/auth/AuthGuard";
+import SystemHeartbeat from "@/components/common/SystemHeartbeat";
 
 export const metadata: Metadata = {
   title: "Inagerlis CRM & POS",
@@ -50,6 +51,7 @@ export default function RootLayout({
           <SidebarProvider>
             <PwaProvider>
               <SocketProvider>
+                <SystemHeartbeat />
                 <AuthGuard>{children}</AuthGuard>
               </SocketProvider>
             </PwaProvider>
