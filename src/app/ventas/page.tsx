@@ -660,8 +660,8 @@ export default function VentasPage() {
                       onClick={() => addProduct(product)}
                       className="group relative flex flex-col justify-between border border-[#E5E5E5] bg-white text-left transition-all hover:border-[#D8A814] hover:shadow-md active:scale-[0.98] cursor-pointer overflow-hidden"
                     >
-                      {/* ÁREA DE IMAGEN PROMINENTE */}
-                      <div className="relative flex h-36 sm:h-40 w-full items-center justify-center bg-[#FAFAFA] p-3 border-b border-[#F0F0F0] overflow-hidden group-hover:bg-white transition-colors">
+                      {/* ÁREA DE IMAGEN PROMINENTE CON FONDO BLANCO PURO */}
+                      <div className="relative flex h-36 sm:h-40 w-full items-center justify-center bg-white p-3 border-b border-[#F0F0F0] overflow-hidden">
                         {product.image ? (
                           <img
                             src={product.image}
@@ -814,9 +814,25 @@ export default function VentasPage() {
                 {cart.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between border border-[#EBEBEB] bg-[#FAFAFA] p-2.5 transition-all hover:bg-white hover:border-[#D8A814]/50 hover:shadow-2xs"
+                    className="flex items-center justify-between border border-[#EBEBEB] bg-[#FAFAFA] p-2 sm:p-2.5 transition-all hover:bg-white hover:border-[#D8A814]/50 hover:shadow-2xs gap-2.5"
                   >
-                    <div className="min-w-0 flex-1 pr-2">
+                    {/* MINIATURA / ÍCONO DEL PRODUCTO */}
+                    <div className="flex h-11 w-11 flex-none items-center justify-center border border-[#E5E5E5] bg-white p-1 overflow-hidden">
+                      {item.image ? (
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="h-full w-full object-contain"
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <Package size={20} strokeWidth={1.5} className="text-[#888888]" />
+                      )}
+                    </div>
+
+                    <div className="min-w-0 flex-1 pr-1">
                       <p className="truncate text-xs font-bold text-[#111827]">
                         {item.name}
                       </p>

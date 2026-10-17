@@ -28,6 +28,7 @@ import {
   Building2,
   CalendarDays,
   Truck,
+  Sparkles,
   X,
 } from "lucide-react";
 
@@ -502,6 +503,35 @@ export default function Sidebar() {
                 >
                   <BarChart3 size={18} strokeWidth={1.8} />
                   {isExpanded && <span>Analíticas</span>}
+                </button>
+              )}
+
+              {/* Asistente IA (Gemini) */}
+              {canVer("ventas") && (
+                <button
+                  onClick={() => goTo("/asistente-ia")}
+                  title="Asistente IA"
+                  className={`
+                    mt-2 flex h-12 w-full items-center
+                    border-l-2 transition-colors
+                    ${isExpanded ? "gap-3 px-4 text-left" : "justify-center px-0"}
+                    text-sm font-medium
+                    ${
+                      pathname.startsWith("/asistente-ia")
+                        ? "border-[#D8A814] bg-[#141414] text-[#D8A814]"
+                        : "border-transparent text-[#C5C5C5] hover:text-[#D8A814]"
+                    }
+                  `}
+                >
+                  <Sparkles size={18} strokeWidth={1.8} className="text-[#D8A814]" />
+                  {isExpanded && (
+                    <span className="flex items-center justify-between flex-1">
+                      <span>Asistente IA</span>
+                      <span className="text-[9px] font-mono font-bold bg-[#D8A814] text-[#050505] px-1 py-0.5">
+                        GEMINI
+                      </span>
+                    </span>
+                  )}
                 </button>
               )}
 

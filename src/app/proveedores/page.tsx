@@ -236,14 +236,10 @@ export default function ProveedoresPage() {
 
   return (
     <AuthGuard>
-      <div className="flex min-h-screen bg-[#F7F7F7]">
+      <div className="crm-layout-container bg-[#F7F7F7]">
         <Sidebar />
 
-        <div
-          className={`flex flex-1 flex-col w-full max-w-full overflow-x-hidden min-w-0 transition-all duration-300 ${
-            collapsed ? "ml-0 lg:ml-[80px]" : "ml-0 lg:ml-[250px]"
-          }`}
-        >
+        <div className={`crm-main-content ${collapsed ? "sidebar-collapsed" : "sidebar-expanded"}`}>
           <Header />
 
           <main className="flex-1 p-3 sm:p-6 lg:p-8 space-y-6 w-full max-w-full">

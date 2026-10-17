@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { getNombrePerfil, getUsuarioActual, isCajero, hasModuloPermiso } from "@/services/auth";
 import { usePwa } from "@/context/PwaContext";
@@ -82,14 +83,27 @@ export default function POSHeader({
     <>
       {/* HEADER POS PRINCIPAL */}
       <header className="flex h-[78px] items-center border-b border-[var(--dark-border)] bg-[var(--dark-bg)] px-7 text-white transition-colors duration-300">
-        <div className="flex min-w-[250px] items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center border border-[#D8A814] font-bold text-[#D8A814]">
-            C
+        <div
+          onClick={() => router.push("/inicio")}
+          className="flex min-w-[240px] items-center gap-3 cursor-pointer group"
+          title="Regresar al CRM Inagerlis"
+        >
+          <div className="flex items-center justify-center">
+            <Image
+              src="/logo.png"
+              alt="Logo Inagerlis"
+              width={110}
+              height={44}
+              priority
+              className="h-10 w-auto object-contain cursor-pointer transition-opacity group-hover:opacity-90"
+            />
           </div>
 
+          <div className="h-6 w-px bg-[#262626] mx-1" />
+
           <div>
-            <p className="text-lg font-bold tracking-[0.12em]">POS</p>
-            <p className="text-[10px] uppercase tracking-[0.18em] text-[#777777]">
+            <p className="text-base font-bold tracking-[0.14em] text-white">POS</p>
+            <p className="text-[9px] uppercase tracking-[0.18em] text-[#888888]">
               Terminal de venta
             </p>
           </div>

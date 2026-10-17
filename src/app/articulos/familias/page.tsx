@@ -211,10 +211,10 @@ export default function FamiliasPage() {
   });
 
   return (
-    <main className="min-h-screen bg-[#F7F7F7]">
+    <main className="crm-layout-container bg-[#F7F7F7]">
       <Sidebar />
 
-      <div className={`min-h-screen transition-all duration-300 ${collapsed ? "ml-0 lg:ml-[80px]" : "ml-0 lg:ml-[250px]"}`}>
+      <div className={`crm-main-content ${collapsed ? "sidebar-collapsed" : "sidebar-expanded"}`}>
         <Header />
 
         {toastMessage && (

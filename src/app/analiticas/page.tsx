@@ -430,14 +430,10 @@ export default function AnaliticasPage() {
   }, [mensajeCampana, clientes, clientesSeleccionadosIds, orgData]);
 
   return (
-    <main className="min-h-screen bg-[#F7F7F7] w-full max-w-full overflow-x-hidden">
+    <main className="crm-layout-container bg-[#F7F7F7]">
       <Sidebar />
 
-      <div
-        className={`min-h-screen w-full max-w-full overflow-x-hidden min-w-0 transition-all duration-300 ${
-          collapsed ? "ml-0 lg:ml-[80px]" : "ml-0 lg:ml-[250px]"
-        }`}
-      >
+      <div className={`crm-main-content ${collapsed ? "sidebar-collapsed" : "sidebar-expanded"}`}>
         <Header />
 
         {/* Notificación Toast */}

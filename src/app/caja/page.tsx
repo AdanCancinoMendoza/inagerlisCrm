@@ -254,13 +254,13 @@ export default function CajaPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#F7F7F7] w-full max-w-full overflow-x-hidden">
+    <main className="crm-layout-container bg-[#F7F7F7]">
       <Sidebar />
 
-      <div className={`min-h-screen w-full max-w-full overflow-x-hidden min-w-0 transition-all duration-300 ${collapsed ? "ml-0 lg:ml-[80px]" : "ml-0 lg:ml-[250px]"}`}>
+      <div className={`crm-main-content ${collapsed ? "sidebar-collapsed" : "sidebar-expanded"}`}>
         <Header />
 
-        <div className="p-3 sm:p-6 lg:p-8 w-full max-w-full">
+        <div className="p-3 sm:p-6 lg:p-8 w-full max-w-full min-w-0">
           {notificacion && (
             <div className="mb-6 flex items-center justify-between border-l-4 border-l-[#D8A814] bg-white p-4 shadow-md">
               <div className="flex items-center gap-3">
