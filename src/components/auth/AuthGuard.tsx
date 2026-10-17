@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
-import { Lock, LogIn, ArrowRight, ShieldAlert, Store } from "lucide-react";
-import { getUsuarioActual, canAccessRoute, isCajero, getRutaPorPerfil } from "@/services/auth";
+import { Lock, LogIn, ArrowRight, ShieldAlert, Store, AlertOctagon, LogOut } from "lucide-react";
+import { getUsuarioActual, canAccessRoute, isCajero, getRutaPorPerfil, logout } from "@/services/auth";
+import { apiRequest } from "@/services/api";
 
 const publicRoutes = [
   "/login",
@@ -19,6 +20,11 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const isPublic = publicRoutes.some((route) => pathname.startsWith(route));
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+  const [organizacionSuspendida, setOrganizacionSuspendida] = useState<{
+    suspendida: boolean;
+    nombre: string;
+    motivo?: string;
+  } | null>(null);
   const [countdown, setCountdown] = useState(3);
   const [usuarioActual, setUsuarioActualState] = useState<any>(null);
 
@@ -40,6 +46,26 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     }
 
     setIsAuthenticated(true);
+
+    // Verificar si la organización está suspendida
+    if (usuario.organizacionId) {
+      apiRequest<any>(`/organizaciones/${usuario.organizacionId}`)
+        .then((org) => {
+          const config = (org?.configuracionTema as Record<string, any>) || {};
+          if (config.estadoOrganizacion === "Suspendida") {
+            setOrganizacionSuspendida({
+              suspendida: true,
+              nombre: org.nombre || "Tu Organización",
+              motivo: config.motivoSuspension || "Cuenta suspendida temporalmente por administración general.",
+            });
+          } else {
+            setOrganizacionSuspendida(null);
+          }
+        })
+        .catch(() => {
+          // Si falla la red, no bloqueamos en modo offline
+        });
+    }
 
     // Verificar si el usuario tiene permiso para la ruta actual
     const tieneAcceso = canAccessRoute(pathname, usuario);
@@ -68,6 +94,56 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       router.push("/login");
     }
   }, [isAuthenticated, isPublic, countdown, router]);
+
+  // CASO ESPECIAL: Organización Suspendida por el Administrador General
+  if (organizacionSuspendida?.suspendida) {
+    return (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-6 backdrop-blur-md">
+        <div className="relative w-full max-w-[500px] overflow-hidden border-2 border-amber-600 bg-white p-8 text-center shadow-2xl">
+          <div className="absolute left-0 right-0 top-0 h-2 bg-amber-600" />
+
+          <div className="mb-4 flex justify-center">
+            <div className="h-16 w-16 flex items-center justify-center bg-amber-50 text-amber-700 border border-amber-200">
+              <AlertOctagon size={36} />
+            </div>
+          </div>
+
+          <p className="text-xs font-mono font-bold uppercase tracking-[0.2em] text-amber-700">
+            SERVICIO TEMPORALMENTE SUSPENDIDO
+          </p>
+
+          <h2 className="mt-2 text-2xl font-black uppercase tracking-tight text-[#050505]">
+            Cuenta Suspendida
+          </h2>
+
+          <p className="mt-3 text-xs font-mono text-[#4B5563]">
+            Organización: <strong className="text-[#050505]">{organizacionSuspendida.nombre}</strong>
+          </p>
+
+          <div className="mt-4 border border-[#E5E7EB] bg-[#FAFAFA] p-4 text-xs text-[#374151] text-left font-mono">
+            <span className="text-[10px] uppercase font-bold text-[#6B7280] block mb-1">
+              Motivo registrado por administración:
+            </span>
+            <p className="italic">"{organizacionSuspendida.motivo}"</p>
+          </div>
+
+          <p className="mt-4 text-xs text-[#6B7280]">
+            El acceso al CRM y al Punto de Venta para esta organización ha sido deshabilitado. Comunícate con tu administrador o soporte técnico para reactivar tu cuenta.
+          </p>
+
+          <div className="mt-6 flex flex-col gap-2">
+            <button
+              onClick={() => logout()}
+              className="flex h-11 w-full items-center justify-center gap-2 bg-[#050505] hover:bg-[#1F2937] px-6 text-xs font-bold uppercase tracking-wider text-white transition-all cursor-pointer"
+            >
+              <LogOut size={16} />
+              <span>Cerrar Sesión</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Si está autenticado y autorizado (o es ruta pública), renderizar la app normalmente
   if ((isAuthenticated === true && isAuthorized === true) || isPublic) {

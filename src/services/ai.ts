@@ -27,6 +27,31 @@ export interface RespuestaIa {
 }
 
 /**
+ * Consulta la organización actual para extraer su configuración y Gemini API Key
+ */
+export async function obtenerConfigOrganizacion(orgId: string): Promise<{
+  geminiApiKey: string | null;
+  estadoOrganizacion: string;
+  nombre: string;
+}> {
+  try {
+    const org = await apiRequest<any>(`/organizaciones/${orgId}`);
+    const tema = (org?.configuracionTema as Record<string, any>) || {};
+    return {
+      geminiApiKey: tema.geminiApiKey || null,
+      estadoOrganizacion: tema.estadoOrganizacion || "Activa",
+      nombre: org?.nombre || "Comercio Inagerlis",
+    };
+  } catch {
+    return {
+      geminiApiKey: null,
+      estadoOrganizacion: "Activa",
+      nombre: "Comercio Inagerlis",
+    };
+  }
+}
+
+/**
  * Consulta al Asistente IA de Gemini con contexto de la empresa
  */
 export async function enviarMensajeIa(
@@ -38,15 +63,79 @@ export async function enviarMensajeIa(
     throw new Error("No hay organización activa seleccionada.");
   }
 
-  return apiRequest<RespuestaIa>("/ai/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      organizacionId,
-      mensaje,
-      historial,
-    }),
-  });
+  // 1. Intentar a través del backend NestJS
+  try {
+    const res = await apiRequest<RespuestaIa>("/ai/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        organizacionId,
+        mensaje,
+        historial,
+      }),
+    });
+    if (res && res.respuesta) {
+      return res;
+    }
+  } catch {
+    // Si el backend no tiene la ruta /ai/chat aún, recurrir al cliente Gemini directo
+  }
+
+  // 2. Ejecución directa con Gemini usando la API Key configurada desde el Admin Panel
+  const config = await obtenerConfigOrganizacion(organizacionId);
+  if (!config.geminiApiKey) {
+    throw new Error(
+      "Esta organización aún no tiene una API Key de Gemini configurada. Asígnala desde el Panel Administrativo (http://localhost:3005) para habilitar el asistente."
+    );
+  }
+
+  // Recopilar contexto básico local
+  const systemInstruction = `Eres "Inagerlis AI", consultor de negocios y asistente inteligente de Inagerlis CRM & POS.
+Empresa: "${config.nombre}".
+Analiza la situación del negocio, responde con precisión ejecutiva y tono profesional corporativo usando formato Markdown.
+Responde de manera concisa y accionable a la consulta del usuario.`;
+
+  const contents = [
+    ...historial.slice(-4).map((h) => ({
+      role: h.rol === "user" ? "user" : "model",
+      parts: [{ text: h.contenido }],
+    })),
+    {
+      role: "user",
+      parts: [
+        {
+          text: `[INSTRUCCIÓN DEL ASISTENTE]:\n${systemInstruction}\n\n[CONSULTA DEL USUARIO]:\n${mensaje}`,
+        },
+      ],
+    },
+  ];
+
+  const geminiRes = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${config.geminiApiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents,
+        generationConfig: {
+          temperature: 0.4,
+          maxOutputTokens: 1000,
+        },
+      }),
+    }
+  );
+
+  if (!geminiRes.ok) {
+    const errData = await geminiRes.text();
+    throw new Error(`Error en API de Gemini: Clave inválida o límite excedido (${geminiRes.status}).`);
+  }
+
+  const geminiData = await geminiRes.json();
+  const respuesta =
+    geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ||
+    "No se obtuvo respuesta del modelo de IA.";
+
+  return { respuesta };
 }
 
 /**
@@ -55,19 +144,18 @@ export async function enviarMensajeIa(
 export async function solicitarDiagnosticoIa(
   tipo: "rendimiento" | "inventario" | "demanda" | "general" = "general"
 ): Promise<RespuestaIa> {
-  const organizacionId = getOrganizacionId();
-  if (!organizacionId) {
-    throw new Error("No hay organización activa seleccionada.");
-  }
+  const prompts = {
+    rendimiento:
+      "Realiza una auditoría exhaustiva del rendimiento comercial de hoy, analizando volumen de ventas, ticket promedio y recomendaciones para aumentar el margen de utilidad.",
+    inventario:
+      "Analiza el inventario, productos de bajo stock y riesgo de desabasto, sugiriendo estrategias de reposición inmediatas.",
+    demanda:
+      "Genera un pronóstico de demanda de mercado para los próximos días, indicando qué categorías promover y qué artículos estacionales preparar.",
+    general:
+      "Genera un Resumen Ejecutivo Integral de la empresa: diagnóstico de ventas, salud del inventario, cortes de caja y 3 acciones prioritarias para el administrador.",
+  };
 
-  return apiRequest<RespuestaIa>("/ai/diagnostico", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      organizacionId,
-      tipo,
-    }),
-  });
+  return enviarMensajeIa(prompts[tipo] || prompts.general);
 }
 
 /**
@@ -85,5 +173,23 @@ export async function obtenerEstadoIa(): Promise<EstadoIa> {
     };
   }
 
-  return apiRequest<EstadoIa>(`/ai/estado/${organizacionId}`);
+  // 1. Intentar endpoint dedicado
+  try {
+    const res = await apiRequest<EstadoIa>(`/ai/estado/${organizacionId}`);
+    if (res && res.disponible !== undefined) {
+      return res;
+    }
+  } catch {}
+
+  // 2. Fallback consultando la organización directamente de la base de datos
+  const config = await obtenerConfigOrganizacion(organizacionId);
+  const tieneClave = Boolean(config.geminiApiKey && config.geminiApiKey.length > 10);
+
+  return {
+    disponible: tieneClave,
+    usandoClavePropia: tieneClave,
+    limiteConsultas: 500,
+    consultasUsadas: 0,
+    estadoOrganizacion: config.estadoOrganizacion,
+  };
 }

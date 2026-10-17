@@ -4,7 +4,7 @@
  * para reducir drásticamente el consumo de peticiones y ancho de banda en Render.
  */
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+  process.env.NEXT_PUBLIC_API_URL || "https://bkina.onrender.com";
 
 export const API_PREFIX = "/inagerlis";
 
