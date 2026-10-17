@@ -279,10 +279,32 @@ export default function LoginForm({
           </Link>
         </div>
 
-        {/* Footer */}
-        <div className="mt-6">
-          <p className="text-center text-[11px] text-[#888888]">
-            © 2026 CRM + POS. Sistema de Gestión Comercial.
+        {/* Footer Legal & Derechos de Autor */}
+        <div className="mt-6 border-t border-[#F0F0F0] pt-4 text-center space-y-2">
+          <div className="flex items-center justify-center gap-3 text-[10px] font-mono uppercase tracking-wider text-[#777777]">
+            <Link
+              href="/legal?tab=terminos"
+              className="hover:text-[#D8A814] hover:underline transition-colors"
+            >
+              Términos
+            </Link>
+            <span>•</span>
+            <Link
+              href="/legal?tab=privacidad"
+              className="hover:text-[#D8A814] hover:underline transition-colors"
+            >
+              Privacidad
+            </Link>
+            <span>•</span>
+            <Link
+              href="/legal?tab=derechos"
+              className="hover:text-[#D8A814] hover:underline transition-colors"
+            >
+              Derechos de Autor
+            </Link>
+          </div>
+          <p className="text-[10px] text-[#999999] font-mono">
+            © 2026 Inagerlis®. Todos los derechos reservados.
           </p>
         </div>
       </div>
